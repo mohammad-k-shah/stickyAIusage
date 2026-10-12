@@ -1,0 +1,77 @@
+name: Unit tests included
+
+# A pull request that changes code under src/ must also add or update a test
+# under tests/. Changes that only touch docs, images, config, or comments
+# inside .cs files pass without tests. When tests are missing, this posts one
+# comment naming the files (updated on every push, never duplicated) and fails
+# the check. The maintainer can waive it with the `no-tests-needed` label.
+#
+# pull_request_target is used so the comment can be posted on pull requests
+# from forks. It only reads the list of changed files through the API and
+# never checks out or runs the pull request's code.
+
+on:
+  pull_request_target:
+    types: [ opened, synchronize, reopened, labeled, unlabeled ]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const marker = '<!-- unit-test-check -->';
+            const pr = context.payload.pull_request;
+            const issue = { ...context.repo, issue_number: pr.number };
+
+            const files = (await github.paginate(github.rest.pulls.listFiles,
+              { ...context.repo, pull_number: pr.number, per_page: 100 }))
+              .filter(f => f.status !== 'removed');
+
+            // An added line counts as code unless it is blank or a comment.
+            // A missing patch means the diff was too large to show: treat as code.
+            const isCode = line => !/^\s*(\/\/|\/\*|\*|$)/.test(line);
+            const changesCode = f => f.patch === undefined || f.patch.split('\n')
+              .some(l => l.startsWith('+') && !l.startsWith('+++') && isCode(l.slice(1)));
+
+            const codeFiles = files.filter(f =>
+              f.filename.startsWith('src/') && f.filename.endsWith('.cs') && changesCode(f));
+            const testFiles = files.filter(f =>
+              f.filename.startsWith('tests/') && f.filename.endsWith('.cs'));
+            const waived = pr.labels.some(l => l.name === 'no-tests-needed');
+            const missing = codeFiles.length > 0 && testFiles.length === 0 && !waived;
+
+            const comments = await github.paginate(github.rest.issues.listComments, issue);
+            const existing = comments.find(c => c.body.includes(marker));
+
+            let body;
+            if (missing) {
+              body = [
+                marker,
+                '🧪 **Unit tests needed**',
+                '',
+                'This pull request changes code in these files but adds or updates no tests under `tests/`:',
+                '',
+                ...codeFiles.map(f => `- \`${f.filename}\``),
+                '',
+                'Please add or update tests that cover the change (usually in `tests/StickyAIusage.Tests/`) and push them to this branch. This check re-runs automatically.',
+                '',
+                'If the change really needs no tests, say why in a comment and the maintainer can waive it.',
+              ].join('\n');
+            } else if (existing) {
+              body = `${marker}\n✅ **Unit tests check passed** — ${waived ? 'waived by the maintainer' : 'tests are included'}. Thanks!`;
+            }
+
+            if (body && existing) {
+              if (existing.body !== body) await github.rest.issues.updateComment({ ...context.repo, comment_id: existing.id, body });
+            } else if (body) {
+              await github.rest.issues.createComment({ ...issue, body });
+            }
+
+            if (missing) core.setFailed(`Code changed in ${codeFiles.length} file(s) under src/ with no test changes under tests/.`);

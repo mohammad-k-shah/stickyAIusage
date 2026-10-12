@@ -1,0 +1,73 @@
+<!-- Dark color tokens. ThemeService merges this or Tokens.Light.xaml as the
+     application's first dictionary; Theme.xaml's styles reach them with
+     DynamicResource, so swapping this out repaints the open windows.
+     Keep both files' keys identical - a key defined here but missing there
+     goes unresolved at runtime, not at build time. -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    
+    <Color x:Key="WindowBackgroundColor">#FF1B1B1F</Color>
+    <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#FF1B1B1F" />
+    <SolidColorBrush x:Key="PanelBrush" Color="#FF1C1C21" />
+    <SolidColorBrush x:Key="CardBrush" Color="#FF25252B" />
+    <SolidColorBrush x:Key="CardHoverBrush" Color="#FF2C2C33" />
+    <SolidColorBrush x:Key="InputBrush" Color="#FF1F1F24" />
+    <SolidColorBrush x:Key="SubtleBorderBrush" Color="#FF33333B" />
+    <SolidColorBrush x:Key="StrongBorderBrush" Color="#FF45454F" />
+    <SolidColorBrush x:Key="HoverOverlayBrush" Color="#1AFFFFFF" />
+
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#FFF3F3F6" />
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#FFA9A9B4" />
+    <SolidColorBrush x:Key="TextTertiaryBrush" Color="#FF74747F" />
+
+    <!-- Claude terracotta, matching the app icon. -->
+    <SolidColorBrush x:Key="AccentBrush" Color="#FFD97757" />
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="#FFE3876A" />
+    <SolidColorBrush x:Key="AccentPressedBrush" Color="#FFC4664A" />
+    <SolidColorBrush x:Key="AccentSoftBrush" Color="#33D97757" />
+    <SolidColorBrush x:Key="OnAccentBrush" Color="#FF1A1310" />
+
+    <SolidColorBrush x:Key="GoodBrush" Color="#FF4CC38A" />
+    <SolidColorBrush x:Key="GoodSoftBrush" Color="#264CC38A" />
+    <SolidColorBrush x:Key="WarnBrush" Color="#FFE8C15A" />
+    <SolidColorBrush x:Key="CautionBrush" Color="#FFF0954A" />
+    <SolidColorBrush x:Key="DangerBrush" Color="#FFEE6B6B" />
+
+    <!-- Powerline segment palette, cycled by position in a row: rose,
+         sand, steel, sage, sky, violet, blush, lime - one per slot in a full
+         row, so a row never repeats a color. -->
+    <SolidColorBrush x:Key="Segment0Brush" Color="#FFD9737E" />
+    <SolidColorBrush x:Key="Segment0TextBrush" Color="#FF221417" />
+    <SolidColorBrush x:Key="Segment1Brush" Color="#FFE3C58F" />
+    <SolidColorBrush x:Key="Segment1TextBrush" Color="#FF221A0E" />
+    <SolidColorBrush x:Key="Segment2Brush" Color="#FF5A7DB8" />
+    <SolidColorBrush x:Key="Segment2TextBrush" Color="#FFFFFFFF" />
+    <SolidColorBrush x:Key="Segment3Brush" Color="#FFA3C293" />
+    <SolidColorBrush x:Key="Segment3TextBrush" Color="#FF15200F" />
+    <SolidColorBrush x:Key="Segment4Brush" Color="#FF7FC7E0" />
+    <SolidColorBrush x:Key="Segment4TextBrush" Color="#FF0E1F26" />
+    <SolidColorBrush x:Key="Segment5Brush" Color="#FFA695DE" />
+    <SolidColorBrush x:Key="Segment5TextBrush" Color="#FF151033" />
+    <SolidColorBrush x:Key="Segment6Brush" Color="#FFEAA8C6" />
+    <SolidColorBrush x:Key="Segment6TextBrush" Color="#FF2A1420" />
+    <SolidColorBrush x:Key="Segment7Brush" Color="#FFC9E27A" />
+    <SolidColorBrush x:Key="Segment7TextBrush" Color="#FF1B2410" />
+
+    <!-- Keys the code-behind looks up by name. -->
+    <SolidColorBrush x:Key="ColorGreen" Color="#FF4CC38A" />
+    <SolidColorBrush x:Key="ColorYellow" Color="#FFE8C15A" />
+    <SolidColorBrush x:Key="ColorOrange" Color="#FFF0954A" />
+    <SolidColorBrush x:Key="ColorRed" Color="#FFEE6B6B" />
+    <SolidColorBrush x:Key="StripBackground" Color="#F21F1F24" />
+    <SolidColorBrush x:Key="StripBackgroundStopped" Color="#F2333339" />
+    <SolidColorBrush x:Key="StripForeground" Color="#FFF3F3F6" />
+    <DropShadowEffect x:Key="FlyoutShadow" BlurRadius="18" ShadowDepth="3" Direction="270" Opacity="0.45" Color="Black" />
+    <DropShadowEffect x:Key="PillShadow" BlurRadius="10" ShadowDepth="1" Direction="270" Opacity="0.4" Color="Black" />
+
+    <!-- Flyout scrollbar and the tray/context menus. -->
+    <SolidColorBrush x:Key="ScrollThumbBrush" Color="#59FFFFFF" />
+    <SolidColorBrush x:Key="ScrollThumbHoverBrush" Color="#8CFFFFFF" />
+    <SolidColorBrush x:Key="MenuBackgroundBrush" Color="#FF2B2B31" />
+
+</ResourceDictionary>

@@ -1,0 +1,268 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="using:StickyAIusage.Mac.Controls"
+        x:Class="StickyAIusage.Mac.SettingsWindow"
+        Title="Sticky AI Usage Settings"
+        Width="500" SizeToContent="Height" CanResize="False" WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource WindowBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13">
+    <Window.Styles>
+        <Style Selector="TextBlock.section">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+            <Setter Property="Margin" Value="4,0,0,8" />
+        </Style>
+        <Style Selector="TextBlock.hint">
+            <Setter Property="FontSize" Value="11.5" />
+            <Setter Property="Margin" Value="0,2,0,0" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+        </Style>
+        <Style Selector="Grid.row">
+            <Setter Property="Margin" Value="16,12" />
+        </Style>
+        <Style Selector="Rectangle.divider">
+            <Setter Property="Height" Value="1" />
+            <Setter Property="Fill" Value="{DynamicResource SubtleBorderBrush}" />
+        </Style>
+        <Style Selector="TextBlock.thresholdLabel">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Margin" Value="7,0,0,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+        </Style>
+        <!-- Segmented control (Appearance): one connected group of buttons,
+             the selected one filled with the accent. -->
+        <Style Selector="Border.segments">
+            <Setter Property="Background" Value="{DynamicResource InputBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource SubtleBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="2" />
+        </Style>
+        <Style Selector="ToggleButton.segment">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="13,5" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="ToggleButton.segment:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource HoverOverlayBrush}" />
+            <Setter Property="TextBlock.Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+        </Style>
+        <Style Selector="ToggleButton.segment:checked /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="TextBlock.Foreground" Value="{DynamicResource OnAccentBrush}" />
+        </Style>
+        <Style Selector="ToggleButton.segment:checked:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}" />
+            <Setter Property="TextBlock.Foreground" Value="{DynamicResource OnAccentBrush}" />
+        </Style>
+        <Style Selector="ToggleButton.segment:checked:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}" />
+        </Style>
+        <Style Selector="ToggleSwitch">
+            <Setter Property="OnContent" Value="" />
+            <Setter Property="OffContent" Value="" />
+            <Setter Property="MinWidth" Value="0" />
+        </Style>
+    </Window.Styles>
+
+    <!-- The footer stays put; everything above it scrolls once the window
+         reaches its maximum height (the screen's work area, set in code). -->
+    <DockPanel>
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="24,14,24,22" Spacing="8">
+        <Button Content="Cancel" Classes="secondary" MinWidth="88" IsCancel="True" Click="Cancel_Click" />
+        <Button x:Name="SaveButton" Content="Save" Classes="primary" MinWidth="88" IsDefault="True" Click="Save_Click" />
+    </StackPanel>
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <StackPanel Margin="24,20,24,8">
+
+        <!-- Header -->
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,22">
+            <Border Width="42" Height="42" CornerRadius="10" Background="{DynamicResource CardBrush}"
+                    BorderBrush="{DynamicResource SubtleBorderBrush}" BorderThickness="1">
+                <Grid>
+                    <c:ProgressRing Width="28" Height="28" Thickness="3" Value="62"
+                                    Stroke="{DynamicResource AccentBrush}" TrackBrush="{DynamicResource StrongBorderBrush}" />
+                    <TextBlock Text="$" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Grid>
+            </Border>
+            <StackPanel Margin="14,0,0,0" VerticalAlignment="Center">
+                <TextBlock Text="Settings" FontSize="20" FontWeight="SemiBold" />
+                <TextBlock Text="Sticky AI Usage · Claude usage at a glance" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Appearance -->
+        <TextBlock Text="Appearance" Classes="section" />
+        <Border Classes="card" Padding="0" Margin="0,0,0,18">
+            <Grid Classes="row" ColumnDefinitions="*,Auto">
+                <StackPanel Margin="0,0,16,0">
+                    <TextBlock Text="Theme" />
+                    <TextBlock Text="Follow your Mac's appearance, or pin light or dark. Applies straight away." Classes="hint" />
+                </StackPanel>
+                <Border Grid.Column="1" Classes="segments" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal">
+                        <ToggleButton x:Name="ThemeSystemButton" Classes="segment" Content="Auto" Click="Theme_Click" />
+                        <ToggleButton x:Name="ThemeLightButton" Classes="segment" Content="Light" Click="Theme_Click" />
+                        <ToggleButton x:Name="ThemeDarkButton" Classes="segment" Content="Dark" Click="Theme_Click" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- Widget -->
+        <TextBlock Text="Widget" Classes="section" />
+        <Border Classes="card" Padding="0" Margin="0,0,0,18">
+            <StackPanel>
+                <Grid Classes="row" ColumnDefinitions="*,Auto">
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="Usage" />
+                        <TextBlock Text="Monthly spend and % of your cap, or your plan's 5-hour and weekly limits" Classes="hint" />
+                    </StackPanel>
+                    <ToggleSwitch x:Name="ShowUsageToggle" Grid.Column="1" VerticalAlignment="Center" />
+                </Grid>
+                <Rectangle Classes="divider" />
+                <Grid Classes="row" ColumnDefinitions="*,Auto">
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="Current session cost" />
+                        <TextBlock Text="Estimated cost of your most recent Claude Code session" Classes="hint" />
+                    </StackPanel>
+                    <ToggleSwitch x:Name="ShowSessionCostToggle" Grid.Column="1" VerticalAlignment="Center" />
+                </Grid>
+                <Rectangle Classes="divider" />
+
+                <!-- Day target: monthly spend cap only. Turned off (with a note)
+                     on plans with rolling 5-hour and weekly limits. -->
+                <StackPanel x:Name="DayTargetSection">
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                        <StackPanel Margin="0,0,16,0">
+                            <TextBlock Text="Day target" />
+                            <TextBlock Text="Approximate spend today against a daily target you set" Classes="hint" />
+                        </StackPanel>
+                        <ToggleSwitch x:Name="ShowDayTargetToggle" Grid.Column="1" VerticalAlignment="Center"
+                                      IsCheckedChanged="DayTarget_Changed" />
+                    </Grid>
+
+                    <StackPanel x:Name="DayTargetOptions" Margin="32,0,16,12">
+                        <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,10">
+                            <TextBlock Text="Daily target" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" Text="$" Margin="0,0,6,0" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextSecondaryBrush}" />
+                            <TextBox x:Name="DayTargetBox" Grid.Column="2" Classes="number" Width="76" />
+                        </Grid>
+                        <TextBlock x:Name="DayTargetError" IsVisible="False" Margin="0,-4,0,10" FontSize="11.5"
+                                   TextWrapping="Wrap" Foreground="{DynamicResource DangerBrush}" />
+                        <TextBlock Text="Show on the widget" FontSize="11.5" Margin="0,0,0,4"
+                                   Foreground="{DynamicResource TextSecondaryBrush}" />
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="Amount spent today ($)" VerticalAlignment="Center" />
+                            <ToggleSwitch x:Name="ShowDayAmountToggle" Grid.Column="1" VerticalAlignment="Center" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="% of target" VerticalAlignment="Center" />
+                            <ToggleSwitch x:Name="ShowDayPercentToggle" Grid.Column="1" VerticalAlignment="Center" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="Progress ring" VerticalAlignment="Center" />
+                            <ToggleSwitch x:Name="ShowDayRingToggle" Grid.Column="1" VerticalAlignment="Center" />
+                        </Grid>
+                    </StackPanel>
+                </StackPanel>
+                <TextBlock x:Name="DayTargetNote" IsVisible="False" Margin="16,0,16,12" Classes="hint"
+                           Foreground="{DynamicResource CautionBrush}" />
+            </StackPanel>
+        </Border>
+
+        <!-- Session cards -->
+        <TextBlock Text="Session cards" Classes="section" />
+        <Border Classes="card" Padding="0" Margin="0,0,0,18">
+            <Grid Classes="row" ColumnDefinitions="*,Auto">
+                <StackPanel Margin="0,0,16,0">
+                    <TextBlock Text="Fields on each card" />
+                    <TextBlock x:Name="FieldsSummary" Classes="hint" />
+                </StackPanel>
+                <Button Grid.Column="1" Content="Customize…" Classes="secondary" VerticalAlignment="Center" Click="CustomizeFields_Click" />
+            </Grid>
+        </Border>
+
+        <!-- Usage alerts -->
+        <TextBlock Text="Usage alerts" Classes="section" />
+        <Border Classes="card" Margin="0,0,0,18">
+            <StackPanel>
+                <TextBlock Text="The usage ring changes color as you use more of your cap or plan limits." Classes="hint" Margin="0,0,0,14" />
+
+                <!-- Live preview of the four zones, sized by the thresholds. -->
+                <Grid x:Name="ZoneBar" Height="8" ColumnDefinitions="50*,30*,15*,5*">
+                    <Border Grid.Column="0" CornerRadius="4,0,0,4" Margin="0,0,1,0" Background="{DynamicResource GoodBrush}" />
+                    <Border Grid.Column="1" Margin="1,0" Background="{DynamicResource WarnBrush}" />
+                    <Border Grid.Column="2" Margin="1,0" Background="{DynamicResource CautionBrush}" />
+                    <Border Grid.Column="3" CornerRadius="0,4,4,0" Margin="1,0,0,0" Background="{DynamicResource DangerBrush}" />
+                </Grid>
+                <Grid Margin="0,4,0,16" ColumnDefinitions="*,Auto">
+                    <TextBlock Text="0%" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" />
+                    <TextBlock Grid.Column="1" Text="100%" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" />
+                </Grid>
+
+                <Grid ColumnDefinitions="*,*,*">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBox x:Name="YellowBox" Classes="number" />
+                        <Ellipse Width="8" Height="8" Margin="10,0,0,0" Fill="{DynamicResource WarnBrush}" VerticalAlignment="Center" />
+                        <TextBlock Text="Yellow" Classes="thresholdLabel" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <TextBox x:Name="OrangeBox" Classes="number" />
+                        <Ellipse Width="8" Height="8" Margin="10,0,0,0" Fill="{DynamicResource CautionBrush}" VerticalAlignment="Center" />
+                        <TextBlock Text="Orange" Classes="thresholdLabel" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal">
+                        <TextBox x:Name="RedBox" Classes="number" />
+                        <Ellipse Width="8" Height="8" Margin="10,0,0,0" Fill="{DynamicResource DangerBrush}" VerticalAlignment="Center" />
+                        <TextBlock Text="Red" Classes="thresholdLabel" />
+                    </StackPanel>
+                </Grid>
+
+                <TextBlock x:Name="ThresholdError" IsVisible="False" Margin="0,10,0,0" FontSize="11.5"
+                           Foreground="{DynamicResource DangerBrush}" />
+            </StackPanel>
+        </Border>
+
+        <!-- General -->
+        <TextBlock Text="General" Classes="section" />
+        <Border Classes="card" Padding="0">
+            <StackPanel>
+                <Grid Classes="row" ColumnDefinitions="*,Auto">
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="Launch at login" />
+                        <TextBlock Text="Start the widget automatically when you log in to your Mac" Classes="hint" />
+                    </StackPanel>
+                    <ToggleSwitch x:Name="LaunchAtLoginToggle" Grid.Column="1" VerticalAlignment="Center" />
+                </Grid>
+                <Rectangle Classes="divider" />
+                <Grid Classes="row" ColumnDefinitions="*,Auto">
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="Widget position" />
+                        <TextBlock Text="Move the widget back into the menu bar" Classes="hint" />
+                    </StackPanel>
+                    <Button Grid.Column="1" Content="Reset" Classes="secondary" VerticalAlignment="Center" Click="ResetPosition_Click" />
+                </Grid>
+                <Rectangle Classes="divider" />
+                <Grid Classes="row" ColumnDefinitions="*,Auto">
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="Diagnostics" />
+                        <TextBlock Text="Logs help troubleshoot usage or sign-in problems" Classes="hint" />
+                    </StackPanel>
+                    <Button Grid.Column="1" Content="Open log folder" Classes="secondary" VerticalAlignment="Center" Click="OpenLogFolder_Click" />
+                </Grid>
+            </StackPanel>
+        </Border>
+
+    </StackPanel>
+    </ScrollViewer>
+    </DockPanel>
+</Window>

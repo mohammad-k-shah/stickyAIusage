@@ -1,0 +1,182 @@
+<Window x:Class="StickyAIusage.DockedStripWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="clr-namespace:StickyAIusage.Controls"
+        xmlns:vm="clr-namespace:StickyAIusage.ViewModels;assembly=StickyAIusage.Core"
+        Title="Sticky AI Usage"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ShowInTaskbar="False"
+        Topmost="True"
+        ResizeMode="NoResize"
+        SizeToContent="WidthAndHeight"
+        UseLayoutRounding="True"
+        FontFamily="{StaticResource UiFont}">
+
+    <!-- The outer margin leaves room for the drop shadows (the window itself is
+         transparent). The pill stays its own size, right-aligned; the flyout
+         opens above it, anchored to the same corner. -->
+    <!-- The pill and the flyout are placed freely inside the window (their
+         Margins are set in code from FlyoutPlacement), so the flyout opens
+         above or below the pill - wherever there's room - and shifts sideways
+         to stay on screen. The outer margin leaves room for the drop shadows
+         (the window itself is transparent). -->
+    <Grid x:Name="RootPanel" Margin="12" TextElement.Foreground="{DynamicResource TextPrimaryBrush}"
+          TextElement.FontFamily="{StaticResource UiFont}">
+
+        <!-- ============ Expanded flyout: sessions ============ -->
+        <Border x:Name="ExpandedPanel" Visibility="Collapsed" Width="540" HorizontalAlignment="Left" VerticalAlignment="Top"
+                Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource SubtleBorderBrush}" BorderThickness="1"
+                CornerRadius="12" Effect="{DynamicResource FlyoutShadow}">
+            <DockPanel Margin="10,12,6,4">
+
+                <Grid DockPanel.Dock="Top" Margin="6,0,4,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock x:Name="RangeTitleText" Text="Today's sessions" FontSize="15" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <TextBlock x:Name="SessionsSummaryText" Text="Loading…" Margin="0,2,0,0" FontSize="11.5"
+                                   Foreground="{DynamicResource TextSecondaryBrush}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Top">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button x:Name="SignInButton" Style="{StaticResource PrimaryButton}" Content="Sign in" Padding="12,4" Margin="0,1,6,0"
+                                    Height="24" FontSize="12" Visibility="Collapsed" Click="SignInButton_Click"
+                                    ToolTip="Sign in to Claude again: opens a terminal and starts the login in your browser" />
+                            <Button x:Name="ThemeToggleButton" Style="{StaticResource IconButton}" Content="&#xE706;"
+                                    ToolTip="Switch to the light theme" Click="ThemeToggleButton_Click" />
+                            <Button Style="{StaticResource IconButton}" Content="&#xE713;"
+                                    ToolTip="Settings" Click="SettingsButton_Click" />
+                        </StackPanel>
+                        <!-- Date range: Today | 2d | 1w | 2w | 30d (SessionRange), filled in code. -->
+                        <StackPanel x:Name="RangeTabs" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,2,0,0" />
+                    </StackPanel>
+                </Grid>
+
+                <!-- Usage card: one row for a monthly cap, or 5-hour / weekly /
+                     credits rows for a Pro or Max plan (WidgetViewModel.SummaryRows). -->
+                <Border x:Name="MonthSummary" DockPanel.Dock="Top" Style="{StaticResource Card}" Padding="12,10,12,3" Margin="0,0,4,10">
+                  <StackPanel>
+                    <Grid Margin="0,0,0,9">
+                        <TextBlock x:Name="SummaryTitleText" FontSize="12" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <TextBlock x:Name="SummaryUpdatedText" HorizontalAlignment="Right" FontSize="11"
+                                   Foreground="{DynamicResource TextTertiaryBrush}" />
+                    </Grid>
+                    <ItemsControl x:Name="SummaryRowsList" Focusable="False">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:SummaryRow}">
+                                <StackPanel Margin="0,0,0,7">
+                                    <Grid>
+                                        <TextBlock Text="{Binding Label, Mode=OneWay}" FontSize="11.5" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                        <TextBlock Text="{Binding Value, Mode=OneWay}" HorizontalAlignment="Right" FontSize="11.5"
+                                                   Foreground="{DynamicResource TextPrimaryBrush}" />
+                                    </Grid>
+                                    <ProgressBar x:Name="RowBar" Style="{StaticResource ThinBar}" Height="6" Margin="0,7,0,0"
+                                                 Value="{Binding Percent, Mode=OneWay, TargetNullValue=0}" Foreground="{DynamicResource ColorGreen}" />
+                                </StackPanel>
+                                <DataTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding Percent}" Value="{x:Null}">
+                                        <Setter TargetName="RowBar" Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Level}" Value="Yellow">
+                                        <Setter TargetName="RowBar" Property="Foreground" Value="{DynamicResource ColorYellow}" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Level}" Value="Orange">
+                                        <Setter TargetName="RowBar" Property="Foreground" Value="{DynamicResource ColorOrange}" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Level}" Value="Red">
+                                        <Setter TargetName="RowBar" Property="Foreground" Value="{DynamicResource ColorRed}" />
+                                    </DataTrigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </Border>
+
+                <TextBlock x:Name="NoSessionsText" DockPanel.Dock="Top" Visibility="Collapsed" Margin="6,2,6,14"
+                           FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" />
+
+                <ScrollViewer Style="{StaticResource OverlayScrollViewer}" MaxHeight="520" Padding="0,0,10,0">
+                    <ItemsControl x:Name="SessionsList" Focusable="False"
+                                  ItemTemplate="{StaticResource SessionCardTemplate}" />
+                </ScrollViewer>
+            </DockPanel>
+        </Border>
+
+        <!-- ============ Collapsed pill ============ -->
+        <!-- Drag anywhere on the pill to move it; a click without moving
+             toggles the flyout. The buttons handle their own clicks, so
+             pressing them never starts a drag or toggles the flyout. -->
+        <Border x:Name="RootBorder" HorizontalAlignment="Left" VerticalAlignment="Top" Height="32" CornerRadius="16" Padding="11,0,3,0"
+                Background="{DynamicResource StripBackground}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1"
+                Effect="{DynamicResource PillShadow}" Cursor="SizeAll"
+                MouseLeftButtonDown="CollapsedStrip_MouseLeftButtonDown"
+                MouseLeftButtonUp="CollapsedStrip_MouseLeftButtonUp">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+
+                <StackPanel x:Name="SpendGroup" Orientation="Horizontal" VerticalAlignment="Center">
+                    <c:ProgressRing x:Name="SpendRing" Width="16" Height="16" Thickness="2.5" Margin="0,0,8,0"
+                                    VerticalAlignment="Center" Stroke="{DynamicResource GoodBrush}"
+                                    TrackBrush="{DynamicResource StrongBorderBrush}" />
+                    <TextBlock x:Name="MonthlySpendText" Text="—" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextPrimaryBrush}" />
+                    <TextBlock x:Name="MonthlyPercentText" Margin="6,0,0,0" FontSize="12" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <TextBlock x:Name="StaleText" Margin="6,0,0,0" FontSize="11" VerticalAlignment="Center" Visibility="Collapsed"
+                               Foreground="{DynamicResource TextTertiaryBrush}" />
+
+                    <!-- Plan accounts: weekly window, remaining credits, last update. -->
+                    <Rectangle x:Name="WeeklyDivider" Width="1" Height="14" Margin="11,0" VerticalAlignment="Center"
+                               Fill="{DynamicResource StrongBorderBrush}" Visibility="Collapsed" />
+                    <TextBlock x:Name="WeeklyText" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" Visibility="Collapsed"
+                               Foreground="{DynamicResource TextPrimaryBrush}" />
+                    <Rectangle x:Name="CreditsDivider" Width="1" Height="14" Margin="11,0" VerticalAlignment="Center"
+                               Fill="{DynamicResource StrongBorderBrush}" Visibility="Collapsed" />
+                    <TextBlock x:Name="CreditsText" FontSize="12" VerticalAlignment="Center" Visibility="Collapsed"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <Rectangle x:Name="UpdatedDivider" Width="1" Height="14" Margin="11,0" VerticalAlignment="Center"
+                               Fill="{DynamicResource StrongBorderBrush}" Visibility="Collapsed" />
+                    <TextBlock x:Name="UpdatedText" FontSize="11" VerticalAlignment="Center" Visibility="Collapsed"
+                               Foreground="{DynamicResource TextTertiaryBrush}" />
+                </StackPanel>
+
+                <!-- Day target (monthly cap only): today's spend, % of the daily
+                     target and its own ring - each part optional in Settings. -->
+                <Rectangle x:Name="DayDivider" Width="1" Height="14" Margin="11,0" VerticalAlignment="Center"
+                           Fill="{DynamicResource StrongBorderBrush}" Visibility="Collapsed" />
+                <StackPanel x:Name="DayGroup" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed">
+                    <c:ProgressRing x:Name="DayRing" Width="16" Height="16" Thickness="2.5" Margin="0,0,8,0"
+                                    VerticalAlignment="Center" Stroke="{DynamicResource GoodBrush}"
+                                    TrackBrush="{DynamicResource StrongBorderBrush}" />
+                    <TextBlock x:Name="DayLabel" Text="Today:" FontSize="12" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <TextBlock x:Name="DayAmountText" Margin="5,0,0,0" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextPrimaryBrush}" />
+                    <TextBlock x:Name="DayPercentText" Margin="6,0,0,0" FontSize="12" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                </StackPanel>
+
+                <Rectangle x:Name="StripDivider" Width="1" Height="14" Margin="11,0" VerticalAlignment="Center"
+                           Fill="{DynamicResource StrongBorderBrush}" />
+
+                <StackPanel x:Name="SessionGroup" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock x:Name="SessionLabel" Text="Session:" FontSize="12" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <TextBlock x:Name="SessionCostText" Text="—" Margin="5,0,0,0" FontSize="13" FontWeight="SemiBold"
+                               VerticalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}" />
+                </StackPanel>
+
+                <Button x:Name="RunToggleButton" Style="{StaticResource IconButton}" Content="&#xE769;" Margin="8,0,0,0"
+                        ToolTip="Pause live updates" Click="RunToggleButton_Click" />
+                <Button x:Name="ExpandButton" Style="{StaticResource IconButton}" Content="&#xE70E;"
+                        ToolTip="Show sessions" Click="ExpandButton_Click" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The macOS app: the same widget as the Windows (WPF) app, built with
+       Avalonia on the shared Core library. Plain net8.0, so no Xcode or
+       macOS workload is needed; scripts/build-mac-app.sh wraps the published
+       output in a .app bundle. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>StickyAIusage</AssemblyName>
+    <!-- The name people see (Windows Task Manager and Startup apps read the
+         exe's description and product name); the exe/assembly keeps its
+         space-free name. -->
+    <AssemblyTitle>Sticky AI Usage</AssemblyTitle>
+    <Product>Sticky AI Usage</Product>
+    <RootNamespace>StickyAIusage.Mac</RootNamespace>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <ApplicationIcon>..\StickyAIusage\Resources\app.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.3.22" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.22" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.22" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\StickyAIusage.Core\StickyAIusage.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="StickyAIusage.Mac.UiTests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+
+</Project>

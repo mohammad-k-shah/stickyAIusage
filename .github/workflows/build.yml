@@ -1,0 +1,90 @@
+name: Build
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore StickyAIusage.sln
+
+      - name: Build
+        run: dotnet build StickyAIusage.sln -c Release --no-restore
+
+      - name: Test
+        run: dotnet test tests/StickyAIusage.Tests/StickyAIusage.Tests.csproj -c Release --no-restore
+
+      - name: UI screenshot tests
+        run: dotnet test tests/StickyAIusage.UiTests/StickyAIusage.UiTests.csproj -c Release --no-restore
+        env:
+          UI_SCREENSHOT_DIR: ${{ github.workspace }}/ui-screenshots
+
+      - name: Upload UI screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-screenshots
+          path: ui-screenshots/**
+          if-no-files-found: warn
+
+      - name: Publish (framework-dependent win-x64)
+        run: >
+          dotnet publish src/StickyAIusage/StickyAIusage.csproj
+          -c Release -r win-x64 --self-contained false
+          -p:PublishSingleFile=true
+          -o publish
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: StickyAIusage-win-x64
+          path: publish/**
+          if-no-files-found: error
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Unit tests (shared core)
+        run: dotnet test tests/StickyAIusage.Tests/StickyAIusage.Tests.csproj -c Release
+
+      - name: macOS UI screenshot tests
+        run: dotnet test tests/StickyAIusage.Mac.UiTests/StickyAIusage.Mac.UiTests.csproj -c Release
+        env:
+          UI_SCREENSHOT_DIR: ${{ github.workspace }}/mac-ui-screenshots
+
+      - name: Upload macOS UI screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-ui-screenshots
+          path: mac-ui-screenshots/**
+          if-no-files-found: warn
+
+      - name: Build Sticky AI Usage.app (Apple Silicon)
+        run: scripts/build-mac-app.sh osx-arm64
+
+      - name: Upload app
+        uses: actions/upload-artifact@v4
+        with:
+          name: StickyAIusage-mac-arm64
+          path: artifacts/mac/StickyAIusage-osx-arm64.zip
+          if-no-files-found: error

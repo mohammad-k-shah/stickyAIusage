@@ -1,0 +1,16 @@
+# Groups the auto-generated release notes by pull request label. Each pull
+# request's author is listed under "Contributors" on the release page.
+changelog:
+  exclude:
+    labels: [ skip-changelog ]
+  categories:
+    - title: 🚀 New features
+      labels: [ feature ]
+    - title: ✨ Improvements
+      labels: [ enhancement ]
+    - title: 🐛 Bug fixes
+      labels: [ bug ]
+    - title: 📝 Documentation
+      labels: [ docs ]
+    - title: Other changes
+      labels: [ "*" ]

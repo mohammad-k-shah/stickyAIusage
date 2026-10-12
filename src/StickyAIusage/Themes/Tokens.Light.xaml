@@ -1,0 +1,74 @@
+<!-- Light color tokens, the dark palette's counterpart rather than an
+     inversion: surfaces get lighter as they come forward (window < card),
+     text and accent are darkened to stay readable on white, and the status
+     colors are deepened - the dark theme's pastels wash out on light.
+     The segment chips keep their colors in both themes: they're the app's
+     signature, and they carry dark text on mid-tone fills either way. -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Color x:Key="WindowBackgroundColor">#FFF2F2F5</Color>
+    <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#FFF2F2F5" />
+    <SolidColorBrush x:Key="PanelBrush" Color="#FFF7F7F9" />
+    <SolidColorBrush x:Key="CardBrush" Color="#FFFFFFFF" />
+    <SolidColorBrush x:Key="CardHoverBrush" Color="#FFF0F0F4" />
+    <SolidColorBrush x:Key="InputBrush" Color="#FFFFFFFF" />
+    <SolidColorBrush x:Key="SubtleBorderBrush" Color="#FFE2E2E9" />
+    <SolidColorBrush x:Key="StrongBorderBrush" Color="#FFC7C7D2" />
+    <SolidColorBrush x:Key="HoverOverlayBrush" Color="#14000000" />
+
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#FF17171C" />
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#FF5B5B67" />
+    <SolidColorBrush x:Key="TextTertiaryBrush" Color="#FF8B8B96" />
+
+    <!-- Claude terracotta, deepened so white text on it stays legible. -->
+    <SolidColorBrush x:Key="AccentBrush" Color="#FFC15F3C" />
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="#FFA94F2F" />
+    <SolidColorBrush x:Key="AccentPressedBrush" Color="#FF8F4325" />
+    <SolidColorBrush x:Key="AccentSoftBrush" Color="#26C15F3C" />
+    <SolidColorBrush x:Key="OnAccentBrush" Color="#FFFFFFFF" />
+
+    <SolidColorBrush x:Key="GoodBrush" Color="#FF15875A" />
+    <SolidColorBrush x:Key="GoodSoftBrush" Color="#2615875A" />
+    <SolidColorBrush x:Key="WarnBrush" Color="#FF9A6F0F" />
+    <SolidColorBrush x:Key="CautionBrush" Color="#FFB85C18" />
+    <SolidColorBrush x:Key="DangerBrush" Color="#FFC0392B" />
+
+    <!-- Powerline segment palette (rose, sand, steel, sage, sky, violet,
+         blush, lime): the same chips as the dark theme. -->
+    <SolidColorBrush x:Key="Segment0Brush" Color="#FFD9737E" />
+    <SolidColorBrush x:Key="Segment0TextBrush" Color="#FF221417" />
+    <SolidColorBrush x:Key="Segment1Brush" Color="#FFE3C58F" />
+    <SolidColorBrush x:Key="Segment1TextBrush" Color="#FF221A0E" />
+    <SolidColorBrush x:Key="Segment2Brush" Color="#FF5A7DB8" />
+    <SolidColorBrush x:Key="Segment2TextBrush" Color="#FFFFFFFF" />
+    <SolidColorBrush x:Key="Segment3Brush" Color="#FFA3C293" />
+    <SolidColorBrush x:Key="Segment3TextBrush" Color="#FF15200F" />
+    <SolidColorBrush x:Key="Segment4Brush" Color="#FF7FC7E0" />
+    <SolidColorBrush x:Key="Segment4TextBrush" Color="#FF0E1F26" />
+    <SolidColorBrush x:Key="Segment5Brush" Color="#FFA695DE" />
+    <SolidColorBrush x:Key="Segment5TextBrush" Color="#FF151033" />
+    <SolidColorBrush x:Key="Segment6Brush" Color="#FFEAA8C6" />
+    <SolidColorBrush x:Key="Segment6TextBrush" Color="#FF2A1420" />
+    <SolidColorBrush x:Key="Segment7Brush" Color="#FFC9E27A" />
+    <SolidColorBrush x:Key="Segment7TextBrush" Color="#FF1B2410" />
+
+    <!-- Keys the code-behind looks up by name. -->
+    <SolidColorBrush x:Key="ColorGreen" Color="#FF15875A" />
+    <SolidColorBrush x:Key="ColorYellow" Color="#FF9A6F0F" />
+    <SolidColorBrush x:Key="ColorOrange" Color="#FFB85C18" />
+    <SolidColorBrush x:Key="ColorRed" Color="#FFC0392B" />
+    <SolidColorBrush x:Key="StripBackground" Color="#F2FFFFFF" />
+    <SolidColorBrush x:Key="StripBackgroundStopped" Color="#F2E7E7EC" />
+    <SolidColorBrush x:Key="StripForeground" Color="#FF17171C" />
+
+    <!-- Softer shadows: a heavy one reads as dirt on a light desktop. -->
+    <DropShadowEffect x:Key="FlyoutShadow" BlurRadius="20" ShadowDepth="3" Direction="270" Opacity="0.18" Color="#FF2A2A33" />
+    <DropShadowEffect x:Key="PillShadow" BlurRadius="10" ShadowDepth="1" Direction="270" Opacity="0.16" Color="#FF2A2A33" />
+
+    <!-- Flyout scrollbar and the tray/context menus. -->
+    <SolidColorBrush x:Key="ScrollThumbBrush" Color="#42000000" />
+    <SolidColorBrush x:Key="ScrollThumbHoverBrush" Color="#6B000000" />
+    <SolidColorBrush x:Key="MenuBackgroundBrush" Color="#FFFFFFFF" />
+
+</ResourceDictionary>

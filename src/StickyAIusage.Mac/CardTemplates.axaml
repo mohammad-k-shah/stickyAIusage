@@ -1,0 +1,101 @@
+<!-- The session card and its colored chips, shared by the widget's flyout and
+     the field customizer's live preview - the preview must be the real card,
+     not a drawing of one. Merged into the app's resources (App.axaml). -->
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:c="using:StickyAIusage.Mac.Controls"
+                    xmlns:vm="using:StickyAIusage.ViewModels">
+
+        <!-- One colored "Label: Value" powerline segment. -->
+        <DataTemplate x:Key="SegmentTemplate" x:DataType="vm:Segment">
+            <c:ChevronSegment IsFirst="{Binding IsFirst}" Fill="{Binding ColorIndex, Converter={x:Static c:Converters.SegmentFill}}">
+                <TextBlock VerticalAlignment="Center" FontSize="11"
+                           Foreground="{Binding ColorIndex, Converter={x:Static c:Converters.SegmentText}}">
+                    <Run Text="{Binding Label}" /><Run Text=": " /><Run Text="{Binding Value}" FontWeight="SemiBold" />
+                </TextBlock>
+            </c:ChevronSegment>
+        </DataTemplate>
+
+        <ItemsPanelTemplate x:Key="WrapRow">
+            <WrapPanel />
+        </ItemsPanelTemplate>
+
+        <!-- A session card: same layout as the Windows flyout. -->
+        <DataTemplate x:Key="SessionCardTemplate" x:DataType="vm:SessionCardViewModel">
+            <Border Classes="card" Padding="14,12,14,10" Margin="0,0,0,8"
+                    BorderBrush="{Binding IsLive, Converter={x:Static c:Converters.LiveBorder}}">
+                <StackPanel>
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,10">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Border IsVisible="{Binding IsLive}" Background="{DynamicResource GoodSoftBrush}"
+                                        CornerRadius="8" Padding="6,1,7,1" Margin="0,0,7,0" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse Width="6" Height="6" Fill="{DynamicResource GoodBrush}" VerticalAlignment="Center" />
+                                        <TextBlock Text="Live" Margin="4,0,0,0" FontSize="10.5" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource GoodBrush}" />
+                                    </StackPanel>
+                                </Border>
+                                <TextBlock Text="{Binding Title}" ToolTip.Tip="{Binding Title}" FontSize="13.5" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"
+                                           MaxWidth="290" VerticalAlignment="Center" />
+                            </StackPanel>
+                            <TextBlock Text="{Binding Subtitle}" Margin="0,3,0,0" FontSize="11.5" TextWrapping="Wrap"
+                                       Foreground="{DynamicResource TextSecondaryBrush}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                            <TextBlock Text="{Binding CostText}" FontSize="19" FontWeight="SemiBold" HorizontalAlignment="Right"
+                                       Foreground="{DynamicResource TextPrimaryBrush}" />
+                            <TextBlock Text="est. cost" FontSize="10.5" HorizontalAlignment="Right"
+                                       Foreground="{DynamicResource TextTertiaryBrush}" />
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- One chip row per row the user arranged (Settings -> Fields). -->
+                    <ItemsControl ItemsSource="{Binding Rows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SegmentRow">
+                                <ItemsControl ItemsSource="{Binding Segments}" ItemTemplate="{StaticResource SegmentTemplate}"
+                                              ItemsPanel="{StaticResource WrapRow}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <StackPanel Margin="0,6,0,0" IsVisible="{Binding HasContext}">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="Context" FontSize="11.5" Foreground="{DynamicResource TextSecondaryBrush}" />
+                            <TextBlock Grid.Column="1" Text="{Binding ContextText}" FontSize="11.5"
+                                       Foreground="{DynamicResource TextSecondaryBrush}" />
+                        </Grid>
+                        <ProgressBar Classes="thin" Margin="0,5,0,0" Value="{Binding ContextPercent}"
+                                     Foreground="{Binding ContextLevel, Converter={x:Static c:Converters.Context}}" />
+                    </StackPanel>
+
+                    <WrapPanel Margin="0,10,0,0" IsVisible="{Binding HasGit}">
+                        <TextBlock Text="⎇" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,5,0" />
+                        <TextBlock Text="{Binding GitBranch}" FontSize="11.5" FontWeight="SemiBold" Margin="0,0,10,0"
+                                   Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <TextBlock Text="{Binding GitStateText}" FontSize="11.5" Margin="0,0,10,0"
+                                   Foreground="{DynamicResource TextSecondaryBrush}" />
+                        <StackPanel Orientation="Horizontal" Margin="0,0,10,0" IsVisible="{Binding HasGitChanges}">
+                            <TextBlock Text="{Binding GitAddedText}" FontSize="11.5" FontFamily="{StaticResource MonoFont}"
+                                       Foreground="{DynamicResource GoodBrush}" Margin="0,0,5,0" />
+                            <TextBlock Text="{Binding GitRemovedText}" FontSize="11.5" FontFamily="{StaticResource MonoFont}"
+                                       Foreground="{DynamicResource DangerBrush}" />
+                        </StackPanel>
+                        <TextBlock Text="{Binding GitSyncText}" FontSize="11.5" FontFamily="{StaticResource MonoFont}" Margin="0,0,10,0"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   IsVisible="{Binding GitSyncText, Converter={x:Static c:Converters.NotEmpty}}" />
+                        <TextBlock Text="{Binding GitPrText}" FontSize="11.5" Margin="0,0,10,0" Foreground="{DynamicResource AccentBrush}"
+                                   IsVisible="{Binding GitPrText, Converter={x:Static c:Converters.NotEmpty}}" />
+                        <TextBlock Text="{Binding GitRepoText}" FontSize="11.5" Foreground="{DynamicResource TextTertiaryBrush}"
+                                   IsVisible="{Binding GitRepoText, Converter={x:Static c:Converters.NotEmpty}}" />
+                    </WrapPanel>
+
+                    <TextBlock Text="{Binding FooterText}" Margin="0,8,0,0" FontSize="10.5" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextTertiaryBrush}" IsVisible="{Binding HasFooter}" />
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
+</ResourceDictionary>

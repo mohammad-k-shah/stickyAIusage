@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Everything that isn't UI: the usage endpoint client, token refresh,
+       transcript parsing, git, pricing and the display models. Plain net8.0,
+       shared by the Windows (WPF) and macOS (Avalonia) apps and tested on
+       any OS. Namespaces are unchanged from when this lived in the WPF
+       project (StickyAIusage.Models/Services/ViewModels). -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>StickyAIusage</RootNamespace>
+    <AssemblyName>StickyAIusage.Core</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="StickyAIusage.Tests" />
+  </ItemGroup>
+
+</Project>

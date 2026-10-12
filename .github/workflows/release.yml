@@ -1,0 +1,120 @@
+name: Release
+
+# Builds the downloadable apps and publishes them on the repository's
+# Releases page, where anyone can download them without a GitHub account.
+# (The Build workflow's artifacts are for us: they need a sign-in and they
+# expire.)
+#
+#   git tag v0.3.0 && git push origin v0.3.0
+#
+# or run this workflow by hand and give it the tag to release.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g. v0.3.0). It must already exist.'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Test
+        run: dotnet test tests/StickyAIusage.Tests/StickyAIusage.Tests.csproj -c Release
+
+      # Self-contained, so a release download needs no .NET install. The tag
+      # (minus its "v") becomes the exe's version, shown in its Properties.
+      - name: Publish
+        env:
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          $version = $env:TAG.TrimStart('v')
+          dotnet publish src/StickyAIusage/StickyAIusage.csproj `
+            -c Release -r win-x64 --self-contained true `
+            -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true `
+            "-p:Version=$version" -o publish
+
+      - name: Zip
+        run: Compress-Archive -Path publish/* -DestinationPath StickyAIusage-win-x64.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-win-x64
+          path: StickyAIusage-win-x64.zip
+          if-no-files-found: error
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Test
+        run: dotnet test tests/StickyAIusage.Tests/StickyAIusage.Tests.csproj -c Release
+
+      - name: Build both architectures
+        env:
+          VERSION: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          VERSION="${VERSION#v}"
+          VERSION="$VERSION" scripts/build-mac-app.sh osx-arm64
+          VERSION="$VERSION" scripts/build-mac-app.sh osx-x64
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-mac
+          path: artifacts/mac/StickyAIusage-osx-*.zip
+          if-no-files-found: error
+
+  publish:
+    needs: [windows, macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: downloads
+          merge-multiple: true
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          mv downloads/StickyAIusage-osx-arm64.zip downloads/StickyAIusage-mac-apple-silicon.zip
+          mv downloads/StickyAIusage-osx-x64.zip downloads/StickyAIusage-mac-intel.zip
+
+          # A short notice ahead of the auto-generated pull-request list, so it's
+          # visible on the Releases page itself, not only in the README.
+          cat > notes.md <<'NOTICE'
+          > [!NOTE]
+          > Uses your Claude sign-in to show live usage, in ways Anthropic hasn't officially
+          > reviewed. See [Before you install](https://github.com/mohammad-k-shah/stickyAIusage#-before-you-install)
+          > before you install it.
+
+          NOTICE
+          gh api "repos/${{ github.repository }}/releases/generate-notes" -f "tag_name=$TAG" --jq .body >> notes.md
+
+          gh release create "$TAG" downloads/*.zip \
+            --title "Sticky AI Usage $TAG" \
+            --notes-file notes.md

@@ -1,0 +1,227 @@
+<!-- The same dark design system as the Windows app (src/StickyAIusage/Themes/Theme.xaml):
+     identical color tokens, so both apps look the same.
+
+     Every color lives in a theme dictionary and is referenced with
+     DynamicResource, so switching light/dark at runtime (ThemeService) repaints
+     the open windows. The light palette is the dark one's counterpart, not an
+     inversion: surfaces get lighter as they come forward (window < card), text
+     and accents are darkened enough to stay readable on white. -->
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Styles.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+
+                <ResourceDictionary x:Key="Dark">
+                    <Color x:Key="WindowBackgroundColor">#FF1B1B1F</Color>
+                    <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#FF1B1B1F" />
+                    <SolidColorBrush x:Key="PanelBrush" Color="#FF1C1C21" />
+                    <SolidColorBrush x:Key="CardBrush" Color="#FF25252B" />
+                    <SolidColorBrush x:Key="CardHoverBrush" Color="#FF2C2C33" />
+                    <SolidColorBrush x:Key="InputBrush" Color="#FF1F1F24" />
+                    <SolidColorBrush x:Key="SubtleBorderBrush" Color="#FF33333B" />
+                    <SolidColorBrush x:Key="StrongBorderBrush" Color="#FF45454F" />
+                    <SolidColorBrush x:Key="HoverOverlayBrush" Color="#1AFFFFFF" />
+
+                    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#FFF3F3F6" />
+                    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#FFA9A9B4" />
+                    <SolidColorBrush x:Key="TextTertiaryBrush" Color="#FF74747F" />
+
+                    <SolidColorBrush x:Key="AccentBrush" Color="#FFD97757" />
+                    <SolidColorBrush x:Key="AccentHoverBrush" Color="#FFE3876A" />
+                    <SolidColorBrush x:Key="OnAccentBrush" Color="#FF1A1310" />
+
+                    <SolidColorBrush x:Key="GoodBrush" Color="#FF4CC38A" />
+                    <SolidColorBrush x:Key="GoodSoftBrush" Color="#264CC38A" />
+                    <SolidColorBrush x:Key="WarnBrush" Color="#FFE8C15A" />
+                    <SolidColorBrush x:Key="CautionBrush" Color="#FFF0954A" />
+                    <SolidColorBrush x:Key="DangerBrush" Color="#FFEE6B6B" />
+
+                    <SolidColorBrush x:Key="StripBackground" Color="#F21F1F24" />
+                    <SolidColorBrush x:Key="StripBackgroundStopped" Color="#F2333339" />
+
+                    <BoxShadows x:Key="FlyoutShadow">0 10 28 0 #73000000</BoxShadows>
+                    <BoxShadows x:Key="PillShadow">0 3 10 0 #59000000</BoxShadows>
+
+                    <!-- Accent for Fluent's built-in controls (toggle switches, focus). -->
+                    <Color x:Key="SystemAccentColor">#FFD97757</Color>
+                    <Color x:Key="SystemAccentColorDark1">#FFC4664A</Color>
+                    <Color x:Key="SystemAccentColorLight1">#FFE3876A</Color>
+                </ResourceDictionary>
+
+                <ResourceDictionary x:Key="Light">
+                    <Color x:Key="WindowBackgroundColor">#FFF2F2F5</Color>
+                    <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#FFF2F2F5" />
+                    <SolidColorBrush x:Key="PanelBrush" Color="#FFF7F7F9" />
+                    <SolidColorBrush x:Key="CardBrush" Color="#FFFFFFFF" />
+                    <SolidColorBrush x:Key="CardHoverBrush" Color="#FFF0F0F4" />
+                    <SolidColorBrush x:Key="InputBrush" Color="#FFFFFFFF" />
+                    <SolidColorBrush x:Key="SubtleBorderBrush" Color="#FFE2E2E9" />
+                    <SolidColorBrush x:Key="StrongBorderBrush" Color="#FFC7C7D2" />
+                    <SolidColorBrush x:Key="HoverOverlayBrush" Color="#14000000" />
+
+                    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#FF17171C" />
+                    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#FF5B5B67" />
+                    <SolidColorBrush x:Key="TextTertiaryBrush" Color="#FF8B8B96" />
+
+                    <SolidColorBrush x:Key="AccentBrush" Color="#FFC15F3C" />
+                    <SolidColorBrush x:Key="AccentHoverBrush" Color="#FFA94F2F" />
+                    <SolidColorBrush x:Key="OnAccentBrush" Color="#FFFFFFFF" />
+
+                    <SolidColorBrush x:Key="GoodBrush" Color="#FF15875A" />
+                    <SolidColorBrush x:Key="GoodSoftBrush" Color="#2615875A" />
+                    <SolidColorBrush x:Key="WarnBrush" Color="#FF9A6F0F" />
+                    <SolidColorBrush x:Key="CautionBrush" Color="#FFB85C18" />
+                    <SolidColorBrush x:Key="DangerBrush" Color="#FFC0392B" />
+
+                    <SolidColorBrush x:Key="StripBackground" Color="#F2FFFFFF" />
+                    <SolidColorBrush x:Key="StripBackgroundStopped" Color="#F2E7E7EC" />
+
+                    <BoxShadows x:Key="FlyoutShadow">0 10 26 0 #2B000000</BoxShadows>
+                    <BoxShadows x:Key="PillShadow">0 2 8 0 #24000000</BoxShadows>
+
+                    <Color x:Key="SystemAccentColor">#FFC15F3C</Color>
+                    <Color x:Key="SystemAccentColorDark1">#FFA94F2F</Color>
+                    <Color x:Key="SystemAccentColorLight1">#FFD97757</Color>
+                </ResourceDictionary>
+
+            </ResourceDictionary.ThemeDictionaries>
+
+            <FontFamily x:Key="MonoFont">Menlo</FontFamily>
+
+            <!-- Icons, drawn as geometry (no icon font on macOS). -->
+            <StreamGeometry x:Key="PauseIcon">M3,2 H6 V12 H3 Z M8,2 H11 V12 H8 Z</StreamGeometry>
+            <StreamGeometry x:Key="PlayIcon">M4,2 L12,7 L4,12 Z</StreamGeometry>
+            <StreamGeometry x:Key="ChevronDownIcon">M2.5,5 L4,3.5 L7,6.5 L10,3.5 L11.5,5 L7,9.5 Z</StreamGeometry>
+            <StreamGeometry x:Key="ChevronUpIcon">M2.5,9 L4,10.5 L7,7.5 L10,10.5 L11.5,9 L7,4.5 Z</StreamGeometry>
+            <!-- Material Design Icons "cog", "weather-night" and
+                 "white-balance-sunny" (Apache 2.0). -->
+            <StreamGeometry x:Key="GearIcon">M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.67 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z</StreamGeometry>
+            <StreamGeometry x:Key="MoonIcon">M17.75,4.09L15.22,6.03L16.13,9.09L13.5,7.28L10.87,9.09L11.78,6.03L9.25,4.09L12.44,4L13.5,1L14.56,4L17.75,4.09M21.25,11L19.61,12.25L20.2,14.23L18.5,13.06L16.8,14.23L17.39,12.25L15.75,11L17.81,10.95L18.5,9L19.19,10.95L21.25,11M18.97,15.95C19.8,15.87 20.69,17.05 20.16,17.8C19.84,18.25 19.5,18.67 19.08,19.07C15.17,23 8.84,23 4.94,19.07C1.03,15.17 1.03,8.83 4.94,4.93C5.34,4.53 5.76,4.17 6.21,3.85C6.96,3.32 8.14,4.21 8.06,5.04C7.79,7.9 8.75,10.87 10.95,13.06C13.14,15.26 16.1,16.22 18.97,15.95Z</StreamGeometry>
+            <StreamGeometry x:Key="SunIcon">M12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,2L14.39,5.42C13.65,5.15 12.84,5 12,5C11.16,5 10.35,5.15 9.61,5.42L12,2M3.34,7L7.5,6.65C6.9,7.16 6.36,7.78 5.94,8.5C5.5,9.24 5.25,10 5.11,10.79L3.34,7M3.36,17L5.12,13.23C5.26,14 5.53,14.78 5.95,15.5C6.37,16.24 6.91,16.86 7.5,17.37L3.36,17M20.65,7L18.88,10.79C18.74,10 18.47,9.23 18.05,8.5C17.63,7.78 17.1,7.15 16.5,6.64L20.65,7M20.64,17L16.5,17.36C17.09,16.85 17.63,16.23 18.05,15.5C18.47,14.77 18.74,14 18.88,13.21L20.64,17M12,22L9.59,18.56C10.33,18.83 11.14,19 12,19C12.82,19 13.63,18.83 14.37,18.56L12,22Z</StreamGeometry>
+        </ResourceDictionary>
+    </Styles.Resources>
+
+    <!-- Card: raised surface used by the usage card, session cards and settings groups. -->
+    <Style Selector="Border.card">
+        <Setter Property="Background" Value="{DynamicResource CardBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource SubtleBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="Padding" Value="14,12" />
+    </Style>
+
+    <!-- Small borderless icon button (pill and flyout header). -->
+    <Style Selector="Button.icon">
+        <Setter Property="Width" Value="26" />
+        <Setter Property="Height" Value="26" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="13" />
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+    <Style Selector="Button.icon:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource HoverOverlayBrush}" />
+    </Style>
+    <Style Selector="Button.icon:pointerover">
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+    <Style Selector="Button.icon:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource StrongBorderBrush}" />
+    </Style>
+    <Style Selector="Button.icon PathIcon">
+        <Setter Property="Width" Value="12" />
+        <Setter Property="Height" Value="12" />
+    </Style>
+
+    <!-- Segmented choice, as in the flyout's Today | 2d | 1w date range. -->
+    <Style Selector="RadioButton.segment">
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="FontSize" Value="11.5" />
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border Background="{TemplateBinding Background}" CornerRadius="5" Padding="7,2">
+                    <ContentPresenter Content="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}"
+                                      HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    <Style Selector="RadioButton.segment:pointerover">
+        <Setter Property="Background" Value="{DynamicResource HoverOverlayBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+    <Style Selector="RadioButton.segment:checked">
+        <Setter Property="Background" Value="{DynamicResource SubtleBorderBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+
+    <!-- Settings buttons. -->
+    <Style Selector="Button.secondary">
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Background" Value="{DynamicResource CardHoverBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource StrongBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="7" />
+        <Setter Property="Padding" Value="14,6" />
+        <Setter Property="FontSize" Value="12.5" />
+    </Style>
+    <Style Selector="Button.primary">
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="7" />
+        <Setter Property="Padding" Value="14,7" />
+        <Setter Property="FontSize" Value="12.5" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
+    </Style>
+
+    <!-- Thin progress bar (usage rows, context). -->
+    <Style Selector="ProgressBar.thin">
+        <Setter Property="Height" Value="5" />
+        <Setter Property="MinHeight" Value="5" />
+        <Setter Property="CornerRadius" Value="3" />
+        <Setter Property="Background" Value="{DynamicResource SubtleBorderBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource GoodBrush}" />
+        <Setter Property="Minimum" Value="0" />
+        <Setter Property="Maximum" Value="100" />
+    </Style>
+
+    <!-- Threshold boxes. -->
+    <Style Selector="TextBox.number">
+        <Setter Property="Width" Value="58" />
+        <Setter Property="MinHeight" Value="30" />
+        <Setter Property="FontSize" Value="12.5" />
+        <Setter Property="Padding" Value="8,5" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="Background" Value="{DynamicResource InputBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource StrongBorderBrush}" />
+        <Setter Property="CornerRadius" Value="6" />
+    </Style>
+    <Style Selector="TextBox.number.error">
+        <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}" />
+    </Style>
+
+    <Style Selector="ToolTip">
+        <Setter Property="Background" Value="{DynamicResource CardHoverBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource StrongBorderBrush}" />
+        <Setter Property="FontSize" Value="12" />
+    </Style>
+</Styles>

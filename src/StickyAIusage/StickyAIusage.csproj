@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationIcon>Resources\app.ico</ApplicationIcon>
+    <AssemblyName>StickyAIusage</AssemblyName>
+    <!-- The name people see (Windows Task Manager and Startup apps read the
+         exe's description and product name); the exe/assembly keeps its
+         space-free name. -->
+    <AssemblyTitle>Sticky AI Usage</AssemblyTitle>
+    <Product>Sticky AI Usage</Product>
+    <RootNamespace>StickyAIusage</RootNamespace>
+    <Platforms>x64</Platforms>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <SelfContained>false</SelfContained>
+    <!-- NOT invariant: WPF needs full ICU/globalization data internally for
+         font-language fallback (MS.Internal.FontCache.MajorLanguages) and
+         throws a TypeInitializationException on startup without it. -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Hardcodet.NotifyIcon.Wpf" Version="2.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\StickyAIusage.Core\StickyAIusage.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Lets the Windows-only screenshot tests drive the windows with sample data. -->
+    <InternalsVisibleTo Include="StickyAIusage.UiTests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Copied to the output folder too (not just embedded as the exe's own
+         icon via ApplicationIcon above) so App.xaml.cs can load it at runtime
+         for the system tray icon, which Windows draws separately from the
+         exe's file icon. -->
+    <Content Include="Resources\app.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,205 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="StickyAIusage.Mac.FieldsWindow"
+        Title="Session Card Fields"
+        WindowState="Maximized"
+        Width="1100" Height="820" MinWidth="720" MinHeight="560"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource WindowBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13">
+    <Window.Styles>
+        <Style Selector="TextBlock.section">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+            <Setter Property="Margin" Value="2,0,0,8" />
+        </Style>
+        <Style Selector="TextBlock.hint">
+            <Setter Property="FontSize" Value="11.5" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+        </Style>
+        <!-- Category heading: a tinted band in the accent color, so it can't
+             be mistaken for one of the fields listed under it. -->
+        <Style Selector="Border.catalogGroup">
+            <Setter Property="Background" Value="{DynamicResource CardHoverBrush}" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="Margin" Value="2,12,2,5" />
+        </Style>
+        <Style Selector="Border.catalogGroup TextBlock">
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="LetterSpacing" Value="1.1" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+        </Style>
+        <Style Selector="Border.catalogGroup TextBlock.count">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="LetterSpacing" Value="0" />
+            <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+        </Style>
+        <!-- A field in the catalog: the whole row is the button. -->
+        <Style Selector="Button.catalog">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="7" />
+            <Setter Property="Padding" Value="8,6" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.catalog:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource HoverOverlayBrush}" />
+        </Style>
+        <Style Selector="Button.catalog.used">
+            <Setter Property="Opacity" Value="0.45" />
+        </Style>
+        <!-- A row of chips, and the drop zone for a new row. -->
+        <Style Selector="Border.fieldRow">
+            <Setter Property="Background" Value="{DynamicResource CardBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource SubtleBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="9" />
+            <Setter Property="Padding" Value="9,8" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+            <Setter Property="MinHeight" Value="44" />
+        </Style>
+        <Style Selector="Border.fieldRow.over">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="Background" Value="{DynamicResource CardHoverBrush}" />
+        </Style>
+        <Style Selector="Border.newRow">
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="{DynamicResource StrongBorderBrush}" />
+            <Setter Property="CornerRadius" Value="9" />
+            <Setter Property="Padding" Value="9,10" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+        </Style>
+        <Style Selector="Border.newRow.over">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="Background" Value="{DynamicResource CardHoverBrush}" />
+        </Style>
+        <!-- A heading in the right pane: the same band the catalog puts above
+             each group, so both sides of the window read alike. Its height is
+             fixed, so the notice appearing inside it leaves the heading where
+             it is - it used to nudge the label up and drop it back. -->
+        <Style Selector="Border.paneHeading">
+            <Setter Property="Background" Value="{DynamicResource CardHoverBrush}" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="8,0" />
+            <Setter Property="Height" Value="26" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+        </Style>
+        <Style Selector="Border.paneHeading TextBlock.title">
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="LetterSpacing" Value="1.1" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+        </Style>
+        <!-- The "a row holds eight" notice: it appears beside the heading when
+             a drop is refused, and leaves on its own after a few seconds. -->
+        <Style Selector="Border.paneHeading TextBlock.noticeIcon">
+            <Setter Property="FontSize" Value="12.5" />
+            <Setter Property="Margin" Value="0,0,5,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{DynamicResource CautionBrush}" />
+        </Style>
+        <Style Selector="Border.paneHeading TextBlock.noticeText">
+            <Setter Property="FontSize" Value="11.5" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+        </Style>
+        <Style Selector="ToggleSwitch">
+            <Setter Property="OnContent" Value="" />
+            <Setter Property="OffContent" Value="" />
+            <Setter Property="MinWidth" Value="0" />
+        </Style>
+    </Window.Styles>
+
+    <DockPanel Margin="20,18,20,18">
+
+        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,16">
+            <TextBlock Text="Session card fields" FontSize="19" FontWeight="SemiBold" />
+            <TextBlock Classes="hint" Margin="0,3,0,0"
+                       Text="Pick what each session card shows in the panel. Drag a chip to reorder it or drop it in another row; a chip always takes the color of its place in the row." />
+        </StackPanel>
+
+        <Grid DockPanel.Dock="Bottom" ColumnDefinitions="Auto,*,Auto" Margin="0,16,0,0">
+            <Button Classes="secondary" Content="Reset to defaults" Click="Reset_Click" />
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                <Button Classes="secondary" Content="Cancel" MinWidth="88" IsCancel="True" Click="Cancel_Click" />
+                <Button Classes="primary" Content="Save" MinWidth="88" IsDefault="True" Click="Save_Click" />
+            </StackPanel>
+        </Grid>
+
+        <Grid ColumnDefinitions="262,20,*">
+
+            <!-- Catalog -->
+            <DockPanel Grid.Column="0">
+                <TextBlock DockPanel.Dock="Top" x:Name="CatalogTitle" Text="Available fields" Classes="section" />
+                <TextBox DockPanel.Dock="Top" x:Name="SearchBox" Watermark="Search fields" Margin="0,0,0,8"
+                         Background="{DynamicResource InputBrush}" BorderBrush="{DynamicResource SubtleBorderBrush}"
+                         CornerRadius="7" FontSize="12.5" />
+                <Border Classes="card" Padding="4,2,4,8">
+                    <ScrollViewer>
+                        <StackPanel x:Name="CatalogPanel" />
+                    </ScrollViewer>
+                </Border>
+            </DockPanel>
+
+            <!-- Layout and preview. A grid, not a dock panel: the rows and
+                 the preview each get a share of the height and scroll inside
+                 it, so a card with many fields can't push either off-screen. -->
+            <Grid Grid.Column="2" RowDefinitions="Auto,2*,Auto,Auto,3*">
+                <Border Classes="paneHeading">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Classes="title" Text="ON THE CARD" />
+                        <StackPanel x:Name="RowFullNotice" Orientation="Horizontal"
+                                    IsVisible="False" Margin="14,0,0,0">
+                            <TextBlock Classes="noticeIcon" Text="&#x24D8;" />
+                            <TextBlock x:Name="RowFullNoticeText" Classes="noticeText" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <ScrollViewer Grid.Row="1" MinHeight="120">
+                    <StackPanel x:Name="RowsPanel" />
+                </ScrollViewer>
+
+                <!-- Always visible under the rows, however far they scroll. -->
+                <ContentControl x:Name="NewRowHost" Grid.Row="2" />
+
+                <Border Grid.Row="3" Classes="card" Padding="12,4" Margin="0,0,0,10">
+                    <StackPanel>
+                        <Grid ColumnDefinitions="*,Auto" Margin="0,8">
+                            <StackPanel Margin="0,0,16,0">
+                                <TextBlock Text="Context bar" />
+                                <TextBlock Classes="hint" Text="The context window bar under the chips" />
+                            </StackPanel>
+                            <ToggleSwitch x:Name="ContextBarToggle" Grid.Column="1" VerticalAlignment="Center" />
+                        </Grid>
+                        <Rectangle Height="1" Fill="{DynamicResource SubtleBorderBrush}" />
+                        <Grid ColumnDefinitions="*,Auto" Margin="0,8">
+                            <StackPanel Margin="0,0,16,0">
+                                <TextBlock Text="Git line" />
+                                <TextBlock Classes="hint" Text="Branch, changes, ±lines, PR and CI, laid out in one line" />
+                            </StackPanel>
+                            <ToggleSwitch x:Name="GitDetailsToggle" Grid.Column="1" VerticalAlignment="Center" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Row="4" Classes="card" Padding="12,10">
+                    <DockPanel>
+                        <Border DockPanel.Dock="Top" Classes="paneHeading">
+                            <TextBlock Classes="title" Text="PREVIEW" />
+                        </Border>
+                        <ScrollViewer>
+                            <ContentControl x:Name="PreviewCard" ContentTemplate="{StaticResource SessionCardTemplate}" />
+                        </ScrollViewer>
+                    </DockPanel>
+                </Border>
+            </Grid>
+        </Grid>
+    </DockPanel>
+</Window>

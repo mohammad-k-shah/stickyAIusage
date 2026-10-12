@@ -1,0 +1,179 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="using:StickyAIusage.Mac.Controls"
+        xmlns:vm="using:StickyAIusage.ViewModels"
+        x:Class="StickyAIusage.Mac.WidgetWindow"
+        Title="Sticky AI Usage"
+        SystemDecorations="None"
+        TransparencyLevelHint="Transparent"
+        Background="Transparent"
+        Topmost="True"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        CanResize="False"
+        SizeToContent="WidthAndHeight"
+        WindowStartupLocation="Manual">
+
+    <Window.Styles>
+        <Style Selector="Rectangle.pillDivider">
+            <Setter Property="Width" Value="1" />
+            <Setter Property="Height" Value="12" />
+            <Setter Property="Margin" Value="9,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Fill" Value="{DynamicResource StrongBorderBrush}" />
+        </Style>
+    </Window.Styles>
+
+
+    <!-- The pill and the flyout are placed freely inside the window (their
+         Margins are set in code from FlyoutPlacement), so the flyout can open
+         above or below the pill and shift sideways to stay on screen. No top
+         margin, so the pill can sit in the menu bar strip; the sides and
+         bottom leave room for the drop shadows (the window is transparent). -->
+    <Grid x:Name="RootGrid" Margin="12,0,12,16">
+
+        <!-- ============ Collapsed pill ============ -->
+        <!-- Drag anywhere on it to move it; a click without moving toggles the
+             flyout; right-click for the menu. -->
+        <Border x:Name="PillBorder" HorizontalAlignment="Left" VerticalAlignment="Top" Height="24" CornerRadius="12" Padding="9,0,2,0"
+                Background="{DynamicResource StripBackground}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1"
+                BoxShadow="{DynamicResource PillShadow}" Cursor="SizeAll">
+            <Border.ContextMenu>
+                <ContextMenu>
+                    <MenuItem x:Name="PauseMenuItem" Header="Pause live updates" Click="RunToggleButton_Click" />
+                    <MenuItem Header="Settings…" Click="SettingsMenu_Click" />
+                    <MenuItem Header="Reset widget position" Click="ResetMenu_Click" />
+                    <Separator />
+                    <MenuItem Header="Quit Sticky AI Usage" Click="QuitMenu_Click" />
+                </ContextMenu>
+            </Border.ContextMenu>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+
+                <StackPanel x:Name="UsageGroup" Orientation="Horizontal" VerticalAlignment="Center">
+                    <c:ProgressRing x:Name="UsageRing" Width="14" Height="14" Thickness="2.2" Margin="0,0,7,0"
+                                    VerticalAlignment="Center" Stroke="{DynamicResource GoodBrush}"
+                                    TrackBrush="{DynamicResource StrongBorderBrush}" />
+                    <TextBlock x:Name="PrimaryText" Text="—" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextPrimaryBrush}" />
+                    <TextBlock x:Name="SecondaryText" Margin="6,0,0,0" FontSize="12" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <TextBlock x:Name="StaleText" Margin="6,0,0,0" FontSize="11" VerticalAlignment="Center" IsVisible="False"
+                               Foreground="{DynamicResource TextTertiaryBrush}" />
+
+                    <!-- Plan accounts: weekly window, remaining credits, last update. -->
+                    <Rectangle x:Name="WeeklyDivider" Classes="pillDivider" />
+                    <TextBlock x:Name="WeeklyText" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextPrimaryBrush}" />
+                    <Rectangle x:Name="CreditsDivider" Classes="pillDivider" />
+                    <TextBlock x:Name="CreditsText" FontSize="12" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <Rectangle x:Name="UpdatedDivider" Classes="pillDivider" />
+                    <TextBlock x:Name="UpdatedText" FontSize="11" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextTertiaryBrush}" />
+                </StackPanel>
+
+                <!-- Day target (monthly cap only): today's spend, % of the daily
+                     target and its own ring - each part optional in Settings. -->
+                <Rectangle x:Name="DayDivider" Classes="pillDivider" IsVisible="False" />
+                <StackPanel x:Name="DayGroup" Orientation="Horizontal" VerticalAlignment="Center" IsVisible="False">
+                    <c:ProgressRing x:Name="DayRing" Width="14" Height="14" Thickness="2.2" Margin="0,0,7,0"
+                                    VerticalAlignment="Center" Stroke="{DynamicResource GoodBrush}"
+                                    TrackBrush="{DynamicResource StrongBorderBrush}" />
+                    <TextBlock x:Name="DayLabel" Text="Today:" Margin="0,0,5,0" FontSize="12" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <TextBlock x:Name="DayAmountText" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextPrimaryBrush}" />
+                    <TextBlock x:Name="DayPercentText" Margin="6,0,0,0" FontSize="12" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                </StackPanel>
+
+                <Rectangle x:Name="PillDivider" Classes="pillDivider" />
+
+                <StackPanel x:Name="SessionGroup" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock x:Name="SessionLabel" Text="Session:" Margin="0,0,5,0" FontSize="12" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <TextBlock x:Name="SessionCostText" Text="—" FontSize="12.5" FontWeight="SemiBold"
+                               VerticalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}" />
+                </StackPanel>
+
+                <Button x:Name="RunToggleButton" Classes="icon" Width="22" Height="22" Margin="6,0,0,0"
+                        ToolTip.Tip="Pause live updates" Click="RunToggleButton_Click">
+                    <PathIcon x:Name="RunToggleIcon" Data="{StaticResource PauseIcon}" Width="10" Height="10" />
+                </Button>
+                <Button x:Name="ExpandButton" Classes="icon" Width="22" Height="22"
+                        ToolTip.Tip="Show sessions" Click="ExpandButton_Click">
+                    <PathIcon x:Name="ExpandIcon" Data="{StaticResource ChevronDownIcon}" Width="11" Height="11" />
+                </Button>
+            </StackPanel>
+        </Border>
+
+        <!-- ============ Flyout: sessions (above or below the pill) ============ -->
+        <Border x:Name="ExpandedPanel" IsVisible="False" Width="500" HorizontalAlignment="Left" VerticalAlignment="Top"
+                Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource SubtleBorderBrush}" BorderThickness="1"
+                CornerRadius="12" BoxShadow="{DynamicResource FlyoutShadow}">
+            <DockPanel Margin="10,12,6,4">
+
+                <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="6,0,4,12">
+                    <StackPanel>
+                        <TextBlock x:Name="RangeTitleText" Text="Today's sessions" FontSize="15" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <TextBlock x:Name="SessionsSummaryText" Text="Loading…" Margin="0,2,0,0" FontSize="11.5"
+                                   Foreground="{DynamicResource TextSecondaryBrush}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Top">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="2">
+                            <Button x:Name="ThemeToggleButton" Classes="icon" ToolTip.Tip="Switch to the light theme" Click="ThemeToggleButton_Click">
+                                <PathIcon x:Name="ThemeToggleIcon" Data="{StaticResource MoonIcon}" Width="13" Height="13" />
+                            </Button>
+                            <Button x:Name="FlyoutRunToggleButton" Classes="icon" ToolTip.Tip="Pause live updates" Click="RunToggleButton_Click">
+                                <PathIcon x:Name="FlyoutRunToggleIcon" Data="{StaticResource PauseIcon}" Width="11" Height="11" />
+                            </Button>
+                            <Button Classes="icon" ToolTip.Tip="Settings" Click="SettingsButton_Click">
+                                <PathIcon Data="{StaticResource GearIcon}" Width="14" Height="14" />
+                            </Button>
+                        </StackPanel>
+                        <!-- Date range: Today | 2d | 1w | 2w | 30d (SessionRange), filled in code. -->
+                        <StackPanel x:Name="RangeTabs" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="1" Margin="0,2,0,0" />
+                    </StackPanel>
+                </Grid>
+
+                <!-- Usage card: "Plan Usage Limits: <plan>", then one row for a
+                     monthly cap, or 5-hour / weekly / credits rows for Pro or Max. -->
+                <Border x:Name="SummaryCard" DockPanel.Dock="Top" Classes="card" Padding="12,10,12,3" Margin="0,0,4,10">
+                    <StackPanel>
+                        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,9">
+                            <TextBlock x:Name="SummaryTitleText" FontSize="12" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextPrimaryBrush}" />
+                            <TextBlock x:Name="SummaryUpdatedText" Grid.Column="1" FontSize="11"
+                                       Foreground="{DynamicResource TextTertiaryBrush}" />
+                        </Grid>
+                        <ItemsControl x:Name="SummaryRowsList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:SummaryRow">
+                                    <StackPanel Margin="0,0,0,7">
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <TextBlock Text="{Binding Label}" FontSize="11.5" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                            <TextBlock Grid.Column="1" Text="{Binding Value}" FontSize="11.5"
+                                                       Foreground="{DynamicResource TextPrimaryBrush}" />
+                                        </Grid>
+                                        <ProgressBar Classes="thin" Margin="0,7,0,0"
+                                                     IsVisible="{Binding Percent, Converter={x:Static c:Converters.HasValue}}"
+                                                     Value="{Binding Percent, Converter={x:Static c:Converters.OrZero}}"
+                                                     Foreground="{Binding Level, Converter={x:Static c:Converters.Level}}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <TextBlock x:Name="NoSessionsText" DockPanel.Dock="Top" IsVisible="False" Margin="6,2,6,14"
+                           FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" />
+
+                <ScrollViewer x:Name="SessionsScroller" MaxHeight="560" Padding="0,0,10,0">
+                    <ItemsControl x:Name="SessionsList" ItemTemplate="{StaticResource SessionCardTemplate}" />
+                </ScrollViewer>
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>

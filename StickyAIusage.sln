@@ -1,0 +1,63 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StickyAIusage", "src\StickyAIusage\StickyAIusage.csproj", "{5B1E7A2E-3E9A-4C2B-8B0E-1F2A3B4C5D6E}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{45062CC3-1BB8-4115-A1DE-A217D1802D8D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StickyAIusage.Tests", "tests\StickyAIusage.Tests\StickyAIusage.Tests.csproj", "{9D1BF7AC-112B-4C3A-B42E-259AF594B93D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StickyAIusage.UiTests", "tests\StickyAIusage.UiTests\StickyAIusage.UiTests.csproj", "{F8B2FF5E-E7D9-4F4E-ADED-4517274C5136}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{B731F346-508E-4AD5-A74C-FFBF78229250}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StickyAIusage.Core", "src\StickyAIusage.Core\StickyAIusage.Core.csproj", "{2DF9DBAB-3F13-45BE-A534-2C26178DE076}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StickyAIusage.Mac", "src\StickyAIusage.Mac\StickyAIusage.Mac.csproj", "{5B83A9D0-3538-44B2-955D-DA883AFFBB84}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StickyAIusage.Mac.UiTests", "tests\StickyAIusage.Mac.UiTests\StickyAIusage.Mac.UiTests.csproj", "{A7EF1D52-F694-4ADA-9504-72AE4F8335D1}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5B1E7A2E-3E9A-4C2B-8B0E-1F2A3B4C5D6E}.Debug|x64.ActiveCfg = Debug|x64
+		{5B1E7A2E-3E9A-4C2B-8B0E-1F2A3B4C5D6E}.Debug|x64.Build.0 = Debug|x64
+		{5B1E7A2E-3E9A-4C2B-8B0E-1F2A3B4C5D6E}.Release|x64.ActiveCfg = Release|x64
+		{5B1E7A2E-3E9A-4C2B-8B0E-1F2A3B4C5D6E}.Release|x64.Build.0 = Release|x64
+		{9D1BF7AC-112B-4C3A-B42E-259AF594B93D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{9D1BF7AC-112B-4C3A-B42E-259AF594B93D}.Debug|x64.Build.0 = Debug|Any CPU
+		{9D1BF7AC-112B-4C3A-B42E-259AF594B93D}.Release|x64.ActiveCfg = Release|Any CPU
+		{9D1BF7AC-112B-4C3A-B42E-259AF594B93D}.Release|x64.Build.0 = Release|Any CPU
+		{F8B2FF5E-E7D9-4F4E-ADED-4517274C5136}.Debug|x64.ActiveCfg = Debug|x64
+		{F8B2FF5E-E7D9-4F4E-ADED-4517274C5136}.Debug|x64.Build.0 = Debug|x64
+		{F8B2FF5E-E7D9-4F4E-ADED-4517274C5136}.Release|x64.ActiveCfg = Release|x64
+		{F8B2FF5E-E7D9-4F4E-ADED-4517274C5136}.Release|x64.Build.0 = Release|x64
+		{2DF9DBAB-3F13-45BE-A534-2C26178DE076}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{2DF9DBAB-3F13-45BE-A534-2C26178DE076}.Debug|x64.Build.0 = Debug|Any CPU
+		{2DF9DBAB-3F13-45BE-A534-2C26178DE076}.Release|x64.ActiveCfg = Release|Any CPU
+		{2DF9DBAB-3F13-45BE-A534-2C26178DE076}.Release|x64.Build.0 = Release|Any CPU
+		{5B83A9D0-3538-44B2-955D-DA883AFFBB84}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{5B83A9D0-3538-44B2-955D-DA883AFFBB84}.Debug|x64.Build.0 = Debug|Any CPU
+		{5B83A9D0-3538-44B2-955D-DA883AFFBB84}.Release|x64.ActiveCfg = Release|Any CPU
+		{5B83A9D0-3538-44B2-955D-DA883AFFBB84}.Release|x64.Build.0 = Release|Any CPU
+		{A7EF1D52-F694-4ADA-9504-72AE4F8335D1}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A7EF1D52-F694-4ADA-9504-72AE4F8335D1}.Debug|x64.Build.0 = Debug|Any CPU
+		{A7EF1D52-F694-4ADA-9504-72AE4F8335D1}.Release|x64.ActiveCfg = Release|Any CPU
+		{A7EF1D52-F694-4ADA-9504-72AE4F8335D1}.Release|x64.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{9D1BF7AC-112B-4C3A-B42E-259AF594B93D} = {45062CC3-1BB8-4115-A1DE-A217D1802D8D}
+		{F8B2FF5E-E7D9-4F4E-ADED-4517274C5136} = {45062CC3-1BB8-4115-A1DE-A217D1802D8D}
+		{2DF9DBAB-3F13-45BE-A534-2C26178DE076} = {B731F346-508E-4AD5-A74C-FFBF78229250}
+		{5B83A9D0-3538-44B2-955D-DA883AFFBB84} = {B731F346-508E-4AD5-A74C-FFBF78229250}
+		{A7EF1D52-F694-4ADA-9504-72AE4F8335D1} = {45062CC3-1BB8-4115-A1DE-A217D1802D8D}
+	EndGlobalSection
+EndGlobal

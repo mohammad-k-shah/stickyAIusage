@@ -1,0 +1,38 @@
+name: Target branch
+
+# Pull requests go to `develop`; only the repository owner may open one into
+# `main`. Anyone else's pull request into `main` is moved to `develop` with a
+# note explaining why.
+#
+# pull_request_target runs with this repository's token even for forks, which
+# is what allows changing the base branch. It never checks out or runs the
+# pull request's code, so that token is never exposed to it.
+
+on:
+  pull_request_target:
+    types: [ opened, reopened, edited ]
+    branches: [ main ]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  retarget:
+    if: github.event.pull_request.user.login != github.repository_owner
+    runs-on: ubuntu-latest
+    steps:
+      - name: Move the pull request to develop
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr edit "$PR" --base develop
+          gh pr comment "$PR" --body "$(cat <<EOF
+          👋 Thanks for your pull request!
+
+          Pull requests can't target \`main\` — it only receives releases, and only the maintainer merges into it. All contributions go to the **\`develop\`** branch, so this pull request has been **moved to \`develop\`** automatically and review can start there.
+
+          Next time, choose **base: \`develop\`** when you open the pull request. See the [contributing guide]($GITHUB_SERVER_URL/$GH_REPO/blob/develop/docs/CONTRIBUTING.md) for the full steps.
+          EOF
+          )"
