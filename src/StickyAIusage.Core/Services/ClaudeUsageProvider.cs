@@ -64,6 +64,29 @@ public sealed class ClaudeUsageProvider : IUsageProvider, IDisposable
     private static readonly TimeSpan MaxRateLimitBackoff = TimeSpan.FromMinutes(30);
     private int _consecutiveRateLimits;
 
+    /// <summary>
+    /// The smallest gap between polls that hasn't been rate limited, learned at
+    /// runtime: the endpoint is undocumented and its allowance differs per
+    /// account, so ActiveInterval alone is a guess. Without this, backing off
+    /// and then returning straight to ActiveInterval means the very next poll
+    /// is rate limited again - observed as success, 429 thirty seconds later,
+    /// repeating all day while the reading sat minutes stale.
+    ///
+    /// Doubles on each 429 and halves on each success, so polling settles just
+    /// under whatever the endpoint currently allows and speeds back up once it
+    /// relents. Persisted with the cooldown so a restart doesn't relearn it.
+    /// </summary>
+    private TimeSpan _learnedFloor;
+
+    internal static TimeSpan RaiseFloor(TimeSpan floor) =>
+        Min(MaxRateLimitBackoff, Max(ActiveInterval + ActiveInterval, floor + floor));
+
+    internal static TimeSpan LowerFloor(TimeSpan floor) =>
+        floor <= ActiveInterval ? TimeSpan.Zero : TimeSpan.FromTicks(floor.Ticks / 2);
+
+    private static TimeSpan Min(TimeSpan a, TimeSpan b) => a < b ? a : b;
+    private static TimeSpan Max(TimeSpan a, TimeSpan b) => a > b ? a : b;
+
     // The credentials file's write time when a 401 last left us needing a new
     // sign-in (a dead refresh token can't be fixed here). When the file changes -
     // the user signed in again - the next poll fetches at once instead of
@@ -176,6 +199,7 @@ public sealed class ClaudeUsageProvider : IUsageProvider, IDisposable
                 _lastSnapshot = snapshot;
                 _consecutiveRateLimits = 0;
                 _reauthStamp = null;
+                SetLearnedFloor(LowerFloor(_learnedFloor));
                 TrySaveDiskCache(snapshot);
                 return snapshot;
             }
@@ -186,9 +210,11 @@ public sealed class ClaudeUsageProvider : IUsageProvider, IDisposable
                 // adaptive interval above regardless of activity state, so a
                 // failing fetch never hammers the endpoint into sustained 429s.
                 var backoff = RateLimitBackoff(rlEx.RetryAfter, ++_consecutiveRateLimits);
+                SetLearnedFloor(RaiseFloor(_learnedFloor));
                 SetNextAllowedFetchAt(DateTimeOffset.UtcNow + backoff);
                 DiagnosticLog.WriteError("ClaudeUsageProvider.GetUsageAsync",
-                    new Exception($"Rate limited; backing off {backoff.TotalSeconds:0}s.", rlEx));
+                    new Exception($"Rate limited; backing off {backoff.TotalSeconds:0}s, "
+                        + $"polling no faster than every {_learnedFloor.TotalSeconds:0}s.", rlEx));
                 // Remember this result, not just return it - otherwise every
                 // subsequent call during the backoff window (there's no new
                 // fetch attempt until it elapses) falls through to a bare
@@ -287,7 +313,8 @@ public sealed class ClaudeUsageProvider : IUsageProvider, IDisposable
         }
 
         var quietFor = DateTimeOffset.UtcNow - _lastActivityChangeAt;
-        return quietFor < QuietThreshold ? ActiveInterval : IdleInterval;
+        // Never poll faster than the endpoint has shown it will tolerate.
+        return Max(quietFor < QuietThreshold ? ActiveInterval : IdleInterval, _learnedFloor);
     }
 
     private static UsageSnapshot UnavailableSnapshot() => new()
@@ -300,9 +327,24 @@ public sealed class ClaudeUsageProvider : IUsageProvider, IDisposable
     private void SetNextAllowedFetchAt(DateTimeOffset value)
     {
         _nextAllowedFetchAt = value;
+        SaveThrottleState();
+    }
+
+    private void SetLearnedFloor(TimeSpan value)
+    {
+        if (value == _learnedFloor) return;
+        _learnedFloor = value;
+        SaveThrottleState();
+    }
+
+    /// <summary>The cooldown on the first line and the learned floor on the
+    /// second, so a file written by an older build (one line) still loads.</summary>
+    private void SaveThrottleState()
+    {
         try
         {
-            File.WriteAllText(_throttleStatePath, value.ToUnixTimeSeconds().ToString());
+            File.WriteAllText(_throttleStatePath,
+                $"{_nextAllowedFetchAt.ToUnixTimeSeconds()}{Environment.NewLine}{(long)_learnedFloor.TotalSeconds}");
         }
         catch
         {
@@ -315,9 +357,13 @@ public sealed class ClaudeUsageProvider : IUsageProvider, IDisposable
         try
         {
             if (!File.Exists(_throttleStatePath)) return null;
-            var text = File.ReadAllText(_throttleStatePath).Trim();
-            if (!long.TryParse(text, out var seconds))
+            var lines = File.ReadAllLines(_throttleStatePath);
+            if (lines.Length == 0 || !long.TryParse(lines[0].Trim(), out var seconds))
                 return null;
+
+            if (lines.Length > 1 && long.TryParse(lines[1].Trim(), out var floorSeconds) && floorSeconds > 0)
+                _learnedFloor = Min(MaxRateLimitBackoff, TimeSpan.FromSeconds(floorSeconds));
+
             var until = DateTimeOffset.FromUnixTimeSeconds(seconds);
             var latest = DateTimeOffset.UtcNow + MaxRateLimitBackoff;
             return until > latest ? latest : until;

@@ -464,4 +464,33 @@ public class FlyoutHeightCapTests
         Assert.Equal(TimeSpan.FromMinutes(30), ClaudeUsageProvider.RateLimitBackoff(null, 9));
         Assert.Equal(TimeSpan.FromMinutes(30), ClaudeUsageProvider.RateLimitBackoff(TimeSpan.FromDays(3), 1));
     }
+
+    [Fact]
+    public void A_rate_limit_raises_the_polling_floor_and_a_success_lowers_it()
+    {
+        // From no floor, one 429 puts polling at twice the active interval.
+        var floor = ClaudeUsageProvider.RaiseFloor(TimeSpan.Zero);
+        Assert.Equal(TimeSpan.FromMinutes(1), floor);
+
+        floor = ClaudeUsageProvider.RaiseFloor(floor);
+        Assert.Equal(TimeSpan.FromMinutes(2), floor);
+
+        // Successes halve it, back down to "no floor" rather than stopping at 30s.
+        floor = ClaudeUsageProvider.LowerFloor(floor);
+        Assert.Equal(TimeSpan.FromMinutes(1), floor);
+        floor = ClaudeUsageProvider.LowerFloor(floor);
+        Assert.Equal(TimeSpan.FromSeconds(30), floor);
+        Assert.Equal(TimeSpan.Zero, ClaudeUsageProvider.LowerFloor(floor));
+        Assert.Equal(TimeSpan.Zero, ClaudeUsageProvider.LowerFloor(TimeSpan.Zero));
+    }
+
+    [Fact]
+    public void The_polling_floor_never_grows_past_the_backoff_cap()
+    {
+        var floor = TimeSpan.Zero;
+        for (var i = 0; i < 20; i++)
+            floor = ClaudeUsageProvider.RaiseFloor(floor);
+
+        Assert.Equal(TimeSpan.FromMinutes(30), floor);
+    }
 }
