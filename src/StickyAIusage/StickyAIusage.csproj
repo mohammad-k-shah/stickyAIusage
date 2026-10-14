@@ -36,13 +36,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Copied to the output folder too (not just embedded as the exe's own
-         icon via ApplicationIcon above) so App.xaml.cs can load it at runtime
-         for the system tray icon, which Windows draws separately from the
-         exe's file icon. -->
-    <Content Include="Resources\app.ico">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <!-- Embedded (not just set as the exe's own icon via ApplicationIcon
+         above) so App.xaml.cs can load it at runtime for the system tray icon,
+         which Windows draws separately from the exe's file icon. Embedded
+         rather than copied beside the exe because a single-file publish has no
+         such file to read. -->
+    <EmbeddedResource Include="Resources\app.ico" />
   </ItemGroup>
 
 </Project>

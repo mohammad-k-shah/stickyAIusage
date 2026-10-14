@@ -186,17 +186,19 @@ public partial class App : Application
         base.OnExit(e);
     }
 
-    /// <summary>Loads the project's own icon (Resources/app.ico, copied next
-    /// to the exe at build time - see the csproj) for the tray icon, instead
-    /// of the generic system icon previously shown there. Falls back to the
-    /// system icon if the file is somehow missing, rather than throwing on
-    /// startup over a cosmetic issue.</summary>
-    private static System.Drawing.Icon LoadTrayIcon()
+    /// <summary>Loads the project's own icon for the tray, instead of the
+    /// generic system icon. Read from the assembly's embedded copy rather than
+    /// a file beside the exe: a single-file publish (what the Releases page
+    /// ships) bundles content into the exe, so the path form found nothing and
+    /// every downloaded copy fell back to the generic icon. Still falls back
+    /// rather than throwing on startup over something cosmetic.</summary>
+    internal static System.Drawing.Icon LoadTrayIcon()
     {
         try
         {
-            var iconPath = System.IO.Path.Combine(AppContext.BaseDirectory, "Resources", "app.ico");
-            return new System.Drawing.Icon(iconPath);
+            using var stream = typeof(App).Assembly.GetManifestResourceStream(TrayIconResourceName)
+                ?? throw new System.IO.FileNotFoundException($"Embedded resource {TrayIconResourceName} is missing.");
+            return new System.Drawing.Icon(stream);
         }
         catch (Exception ex)
         {
@@ -204,6 +206,8 @@ public partial class App : Application
             return System.Drawing.SystemIcons.Application;
         }
     }
+
+    internal const string TrayIconResourceName = "StickyAIusage.Resources.app.ico";
 }
 
 /// <summary>Registers/unregisters StickyAIusage under HKCU Run so it starts

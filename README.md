@@ -11,6 +11,7 @@ usage — your monthly cap or your Pro/Max limits, and what today's work has cos
 [![Windows](https://img.shields.io/badge/Windows%2011-ready-0078D4?logo=windows11&logoColor=white)](#-install)
 [![macOS](https://img.shields.io/badge/macOS%2012%2B-ready-555555?logo=apple&logoColor=white)](#-install)
 [![For](https://img.shields.io/badge/for-Claude%20Desktop%20%26%20Claude%20Code-D97757)](https://claude.com/download)
+[![Downloads](https://img.shields.io/github/downloads/mohammad-k-shah/stickyAIusage/total?color=2EA043&label=downloads)](https://github.com/mohammad-k-shah/stickyAIusage/releases)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-7C5CD6.svg)](#-contributing)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 
