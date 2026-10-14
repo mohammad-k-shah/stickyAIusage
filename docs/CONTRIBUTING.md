@@ -111,7 +111,7 @@ git push origin v1.1.0
 
 The release notes list every merged pull request grouped by its label (see `.github/release.yml`), and GitHub
 shows each pull request's author under **Contributors**. Label pull requests `feature`, `enhancement`, `bug` or
-`docs` before merging so they land in the right group.
+`documentation` before merging so they land in the right group.
 
 Windows ships self-contained (no .NET install needed to run it); macOS ships an ad-hoc signed app bundle for
 Apple Silicon and Intel. The **Build** workflow's artifacts are for us — they need a GitHub sign-in and they
