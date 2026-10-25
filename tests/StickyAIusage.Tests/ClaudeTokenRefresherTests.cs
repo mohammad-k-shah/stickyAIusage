@@ -28,19 +28,26 @@ public class ClaudeTokenRefresherTests : IDisposable
     private static readonly string NewTokensBody =
         """{"access_token":"new-access","refresh_token":"new-refresh","expires_in":3600}""";
 
-    private void WriteCredentials(string access, string refresh, DateTimeOffset expiresAt) =>
+    private void WriteCredentials(string access, string refresh, DateTimeOffset expiresAt,
+        DateTimeOffset? refreshTokenExpiresAt = null)
+    {
+        var oauth = new Dictionary<string, object>
+        {
+            ["accessToken"] = access,
+            ["refreshToken"] = refresh,
+            ["expiresAt"] = expiresAt.ToUnixTimeMilliseconds(),
+            ["scopes"] = new[] { "user:inference", "user:profile" },
+            ["subscriptionType"] = "enterprise"
+        };
+        if (refreshTokenExpiresAt is { } rt)
+            oauth["refreshTokenExpiresAt"] = rt.ToUnixTimeMilliseconds();
+
         File.WriteAllText(CredPath, JsonSerializer.Serialize(new
         {
-            claudeAiOauth = new
-            {
-                accessToken = access,
-                refreshToken = refresh,
-                expiresAt = expiresAt.ToUnixTimeMilliseconds(),
-                scopes = new[] { "user:inference", "user:profile" },
-                subscriptionType = "enterprise"
-            },
+            claudeAiOauth = oauth,
             someOtherTool = new { keep = true }
         }));
+    }
 
     private JsonNode ReadCredentials() => JsonNode.Parse(File.ReadAllText(CredPath))!;
 
@@ -109,6 +116,25 @@ public class ClaudeTokenRefresherTests : IDisposable
 
         Assert.Equal("expired", token);
         Assert.Equal(before, File.ReadAllText(CredPath));
+    }
+
+    [Theory]
+    [InlineData(-5, true)]   // the refresh token's own expiry has passed
+    [InlineData(60, false)]  // still good
+    public void An_expired_refresh_token_is_recognised_without_calling_the_endpoint(int minutes, bool expired)
+    {
+        WriteCredentials("access", "refresh", DateTimeOffset.UtcNow.AddMinutes(-1),
+            refreshTokenExpiresAt: DateTimeOffset.UtcNow.AddMinutes(minutes));
+
+        Assert.Equal(expired, ClaudeTokenRefresher.RefreshTokenExpired(new FileCredentialStore(CredPath)));
+    }
+
+    [Fact]
+    public void Credentials_without_a_refresh_token_expiry_are_left_to_the_normal_path()
+    {
+        WriteCredentials("access", "refresh", DateTimeOffset.UtcNow.AddMinutes(-1));
+
+        Assert.False(ClaudeTokenRefresher.RefreshTokenExpired(new FileCredentialStore(CredPath)));
     }
 
     [Fact]

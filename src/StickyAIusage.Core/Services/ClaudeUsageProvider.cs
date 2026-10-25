@@ -51,6 +51,12 @@ public sealed class ClaudeUsageProvider : IUsageProvider, IDisposable
     // reading, so the server has rolled over.
     private static readonly TimeSpan ResetGrace = TimeSpan.FromSeconds(20);
 
+    // How long to wait between attempts while the sign-in is expired. Long,
+    // because only a new sign-in can help and a changed credentials file is
+    // noticed immediately anyway; this is the fallback for macOS, where the
+    // Keychain exposes no timestamp to watch.
+    private static readonly TimeSpan ReauthRetry = TimeSpan.FromHours(1);
+
     // Fallback backoff on a 429 with no (or an unparsable) Retry-After header.
     // Without a real backoff, a failing fetch retries on every tick and keeps
     // the endpoint rate-limiting the app for hours.
@@ -182,6 +188,16 @@ public sealed class ClaudeUsageProvider : IUsageProvider, IDisposable
             _lastFetchAttempt = now;
 
             var store = ClaudeCredentialsReader.ForCurrentPlatform();
+
+            // Once the refresh token itself has expired, a refresh and a usage
+            // call must both fail, so making them every few minutes only spends
+            // this account's rate-limit budget on a sign-in the user has to do
+            // by hand. Wait for the credentials to change instead (noticed at
+            // once on Windows, see IsFetchDue; by this cooldown on macOS, where
+            // the Keychain gives no timestamp to watch).
+            if (ClaudeTokenRefresher.RefreshTokenExpired(store))
+                return RequireReauth();
+
             var token = await ClaudeTokenRefresher.GetValidAccessTokenAsync(_httpClient, store, cancellationToken);
             if (token is null)
             {
@@ -235,12 +251,8 @@ public sealed class ClaudeUsageProvider : IUsageProvider, IDisposable
                 // reality. The stored token can go stale even during active
                 // Claude Desktop use, so this is a real fallback path. Back off
                 // well past a single failed refresh attempt before retrying.
-                SetNextAllowedFetchAt(DateTimeOffset.UtcNow + TimeSpan.FromMinutes(10));
-                _reauthStamp = CredentialsStamp();
                 DiagnosticLog.WriteError("ClaudeUsageProvider.GetUsageAsync", authEx);
-                _lastSnapshot = (_lastSnapshot ?? UnavailableSnapshot()) with { IsStale = true, RequiresReauth = true };
-                TrySaveDiskCache(_lastSnapshot);
-                return _lastSnapshot;
+                return RequireReauth();
             }
             catch (Exception ex)
             {
@@ -315,6 +327,22 @@ public sealed class ClaudeUsageProvider : IUsageProvider, IDisposable
         var quietFor = DateTimeOffset.UtcNow - _lastActivityChangeAt;
         // Never poll faster than the endpoint has shown it will tolerate.
         return Max(quietFor < QuietThreshold ? ActiveInterval : IdleInterval, _learnedFloor);
+    }
+
+    /// <summary>Shows "sign in" and waits: only the user can fix this, by
+    /// signing in again, which rewrites the credentials. Logged once per spell
+    /// rather than on every attempt, so a login left expired overnight doesn't
+    /// bury the rest of the log.</summary>
+    private UsageSnapshot RequireReauth()
+    {
+        if (_lastSnapshot?.RequiresReauth != true)
+            DiagnosticLog.WriteInfo("Claude sign-in has expired; waiting for a new one (run `claude` and use /login).");
+
+        SetNextAllowedFetchAt(DateTimeOffset.UtcNow + ReauthRetry);
+        _reauthStamp = CredentialsStamp();
+        _lastSnapshot = (_lastSnapshot ?? UnavailableSnapshot()) with { IsStale = true, RequiresReauth = true };
+        TrySaveDiskCache(_lastSnapshot);
+        return _lastSnapshot;
     }
 
     private static UsageSnapshot UnavailableSnapshot() => new()
