@@ -182,7 +182,9 @@ public sealed class WidgetViewModel
                 }
 
                 ring = Math.Max(fiveHour?.Percent ?? 0, weeklyWindow?.Percent ?? 0);
-                updatedText = "Updated: " + age;
+                // Say so, rather than letting "Updated: 2d ago" creep up with no
+                // hint that the numbers are frozen until the user signs in again.
+                updatedText = usage.RequiresReauth ? "Sign in to Claude" : "Updated: " + age;
                 lines.Add(freshness);
                 tooltip = string.Join("\n", lines);
                 break;

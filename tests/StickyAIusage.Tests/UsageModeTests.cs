@@ -207,6 +207,29 @@ public class WidgetViewModelTests
         Assert.Null(none.StaleText);
     }
 
+    [Fact]
+    public void A_plan_account_whose_sign_in_expired_is_told_to_sign_in()
+    {
+        var snapshot = new UsageSnapshot
+        {
+            FiveHourUtilizationPercent = 43,
+            WeeklyUtilizationPercent = 14,
+            SubscriptionType = "pro",
+            FetchedAt = Now.AddDays(-2),
+            IsStale = true,
+            RequiresReauth = true
+        };
+
+        var vm = WidgetViewModel.From(snapshot, null, Settings, Now);
+
+        // The percentages stay (they were real once), but the pill says why
+        // they are frozen instead of only ageing a timestamp.
+        Assert.Equal("Sign in to Claude", vm.UpdatedText);
+        Assert.True(vm.NeedsSignIn);
+        Assert.Equal("5h: 43%", vm.PrimaryText);
+        Assert.Contains("/login", vm.UsageTooltip);
+    }
+
     [Theory]
     [InlineData(null, ThemePreference.System)]
     [InlineData("", ThemePreference.System)]

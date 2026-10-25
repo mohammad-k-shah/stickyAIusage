@@ -62,6 +62,24 @@ public static class ClaudeTokenRefresher
     internal static Task<string?> GetValidAccessTokenAsync(HttpClient httpClient, string credentialsPath, CancellationToken ct) =>
         GetValidAccessTokenAsync(httpClient, new FileCredentialStore(credentialsPath), ct);
 
+    /// <summary>True when the stored refresh token's own expiry has passed, so
+    /// refreshing cannot succeed and only a new sign-in will help. Unknown
+    /// (false) when the credentials don't carry refreshTokenExpiresAt, so an
+    /// unfamiliar file shape still gets the normal refresh-then-401 path.
+    /// Never throws.</summary>
+    public static bool RefreshTokenExpired(ICredentialStore store)
+    {
+        try
+        {
+            var expiresAtMs = TryReadCredentials(store)?.OAuth["refreshTokenExpiresAt"]?.GetValue<long>();
+            return expiresAtMs is { } ms && DateTimeOffset.FromUnixTimeMilliseconds(ms) <= DateTimeOffset.UtcNow;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     /// <summary>The plan named in the credentials ("pro", "max", "enterprise"...),
     /// or null. Never throws.</summary>
     public static string? ReadSubscriptionType(ICredentialStore store)
