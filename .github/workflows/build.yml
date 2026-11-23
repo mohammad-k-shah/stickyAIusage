@@ -18,9 +18,9 @@ jobs:
     # The Claude Code plugin's pure helpers, with Node's own test runner (no packages).
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
 
@@ -40,10 +40,10 @@ jobs:
   build-windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
@@ -73,7 +73,7 @@ jobs:
       - name: Upload UI screenshots
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ui-screenshots
           path: ui-screenshots/**
@@ -98,7 +98,7 @@ jobs:
       - name: Upload the self-test report
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: self-test-windows
           path: self-test-windows.txt
@@ -107,7 +107,7 @@ jobs:
 
       - name: Upload build artifact
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: StickyAIusage-win-x64
           path: publish/**
@@ -119,10 +119,10 @@ jobs:
     # way winget does: silent install, checks, silent uninstall, checks.
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
@@ -196,7 +196,7 @@ jobs:
       - name: Upload the setup log and the self-test report
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: setup-log
           path: |
@@ -212,10 +212,10 @@ jobs:
     if: github.event.repository.visibility == 'public' || github.event_name == 'workflow_dispatch'
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
@@ -236,7 +236,7 @@ jobs:
       - name: Upload macOS UI screenshots
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: mac-ui-screenshots
           path: mac-ui-screenshots/**
@@ -255,7 +255,7 @@ jobs:
       - name: Upload the self-test report
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: self-test-mac
           path: self-test-mac.txt
@@ -264,7 +264,7 @@ jobs:
 
       - name: Upload app
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: StickyAIusage-mac-arm64
           path: artifacts/mac/StickyAIusage-osx-arm64.zip

@@ -28,7 +28,7 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # build-mode none reads the source without building it, so the Windows
       # (WPF) project is analyzed on Linux as well.
