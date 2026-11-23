@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.12.0.schema.json
+
+PackageIdentifier: MohammadKShah.StickyAIUsage
+PackageVersion: {{VERSION}}
+Platform:
+- Windows.Desktop
+MinimumOSVersion: 10.0.22000.0
+InstallerType: inno
+Scope: user
+InstallModes:
+- interactive
+- silent
+- silentWithProgress
+InstallerSwitches:
+  Custom: /CHANNEL=winget
+UpgradeBehavior: install
+ProductCode: '{FF38E1A6-407C-4A95-A184-D8CC911BD1CB}_is1'
+Installers:
+- Architecture: x64
+  InstallerUrl: https://github.com/mohammad-k-shah/stickyAIusage/releases/download/v{{VERSION}}/StickyAIusage-Setup-x64.exe
+  InstallerSha256: {{SHA256:StickyAIusage-Setup-x64.exe}}
+ManifestType: installer
+ManifestVersion: 1.12.0

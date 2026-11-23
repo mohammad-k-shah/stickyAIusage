@@ -1,0 +1,42 @@
+name: CodeQL
+
+# GitHub's code scanning for the C# code, results under Security > Code
+# scanning. It runs in the public repository only: code scanning of a private
+# repository needs GitHub Advanced Security, and a private copy would only
+# fail or spend minutes here.
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths-ignore: [ 'docs/**', '**/*.md' ]
+  pull_request:
+    paths-ignore: [ 'docs/**', '**/*.md' ]
+  schedule:
+    # Weekly, for queries added since the last push (Monday 04:30 UTC).
+    - cron: '30 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    # A scheduled run carries no repository details, so it is matched by name.
+    if: github.event.repository.visibility == 'public' || github.repository == 'mohammad-k-shah/stickyAIusage'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # build-mode none reads the source without building it, so the Windows
+      # (WPF) project is analyzed on Linux as well.
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: csharp
+          build-mode: none
+
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:csharp

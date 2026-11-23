@@ -5,38 +5,66 @@ using StickyAIusage.Models;
 
 namespace StickyAIusage.Services;
 
+/// <summary>Runs a program in a folder and returns its trimmed standard
+/// output, or null when it is missing, fails, prints nothing or runs too long.</summary>
+public delegate string? ProcessRunner(string workingDirectory, string fileName, IReadOnlyList<string> arguments);
+
+/// <summary>The pull request of a session's branch and its checks, from `gh`.</summary>
+public sealed record PullRequestInfo(string? Url, string? State, string? CiStatus);
+
 /// <summary>
 /// Runs `git` (and, if present, `gh`) against a session's working directory to
-/// fill in the git/PR/CI block. Every external
-/// process call is wrapped defensively: missing `git`/`gh`, a non-repo folder,
-/// or a slow/hung process must never crash or freeze the UI thread - callers
-/// should invoke this off the UI thread and it applies its own short timeouts.
+/// fill in the git/PR/CI block. Every external process call is wrapped
+/// defensively: missing `git`/`gh`, a non-repo folder, or a slow/hung process
+/// must never crash or freeze the UI thread - callers invoke this off the UI
+/// thread and it applies its own short timeouts.
+///
+/// The folders are the user's projects, and a repository's own config can name
+/// programs for git to run (core.fsmonitor, an external diff, a textconv
+/// filter): those are switched off on the command line, and neither git nor gh
+/// may ever stop to ask for anything (<see cref="QuietEnvironment"/>).
 /// </summary>
-public static class GitInfoReader
+public sealed class GitInfoReader
 {
     private static readonly TimeSpan ProcessTimeout = TimeSpan.FromSeconds(3);
 
-    public static GitInfo? TryRead(string workingDirectory)
+    /// <summary>The reader that starts real processes.</summary>
+    public static GitInfoReader Default { get; } = new(RunProcess);
+
+    private readonly ProcessRunner _run;
+
+    /// <param name="run">Starts the processes; tests pass a fake.</param>
+    public GitInfoReader(ProcessRunner run) => _run = run;
+
+    /// <summary>The local git state and, for a GitHub origin, the pull request.</summary>
+    public GitInfo? TryRead(string workingDirectory) =>
+        ReadLocal(workingDirectory) is { } info ? WithPullRequest(info, ReadPullRequest(workingDirectory, info)) : null;
+
+    /// <summary>The git state of the folder (git only, no network), or null
+    /// when it isn't a repository or git isn't installed.</summary>
+    public GitInfo? ReadLocal(string workingDirectory)
     {
         if (!Directory.Exists(workingDirectory))
             return null;
 
         // One call yields branch, SHA, ahead/behind and every file's state
         // (previously five separate git invocations).
-        var status = RunGit(workingDirectory, "status --porcelain=v2 --branch");
+        var status = RunGit(workingDirectory, "status", "--porcelain=v2", "--branch");
         if (status is null)
             return null; // Not a git repo, or git isn't on PATH - not an error.
 
         var parsed = ParseStatusV2(status);
-        var (insertions, deletions) = ParseNumstat(RunGit(workingDirectory, "diff --numstat HEAD") ?? string.Empty);
-        var topLevel = RunGit(workingDirectory, "rev-parse --show-toplevel");
-        var remotes = ParseRemotes(RunGit(workingDirectory, "remote -v") ?? string.Empty);
+        var (insertions, deletions) = ParseNumstat(
+            RunGit(workingDirectory, "diff", "--no-ext-diff", "--no-textconv", "--numstat", "HEAD") ?? string.Empty);
+        var topLevel = RunGit(workingDirectory, "rev-parse", "--show-toplevel");
+        var remotes = ParseRemotes(RunGit(workingDirectory, "remote", "-v") ?? string.Empty);
 
-        var (originOwner, originRepo) = ParseOwnerRepo(remotes.GetValueOrDefault("origin"));
+        var origin = remotes.GetValueOrDefault("origin");
+        var (originOwner, originRepo) = ParseOwnerRepo(origin);
         var (upstreamOwner, upstreamRepo) = ParseOwnerRepo(remotes.GetValueOrDefault("upstream"));
         var rootName = topLevel is null ? null : Path.GetFileName(topLevel.TrimEnd('/', '\\'));
 
-        var info = new GitInfo
+        return new GitInfo
         {
             Branch = parsed.Branch,
             Sha = parsed.Sha,
@@ -49,6 +77,7 @@ public static class GitInfoReader
             Insertions = insertions,
             Deletions = deletions,
             RootDirectoryName = rootName,
+            OriginHost = RemoteHost(origin),
             OriginOwner = originOwner,
             OriginRepo = originRepo,
             UpstreamOwner = upstreamOwner,
@@ -56,19 +85,22 @@ public static class GitInfoReader
             IsFork = upstreamOwner is not null && originOwner is not null && upstreamOwner != originOwner,
             WorktreeName = rootName
         };
-
-        return TryEnrichWithGitHub(workingDirectory, info);
     }
 
-    /// <summary>Adds PR/CI info via `gh` if it's installed and authenticated
-    /// (optional, hidden if `gh` isn't available). Uses `gh`'s raw
-    /// --json output parsed with System.Text.Json rather than a jq filter
-    /// string, to avoid fragile nested-quoting across the process boundary.</summary>
-    private static GitInfo TryEnrichWithGitHub(string workingDirectory, GitInfo info)
+    /// <summary>PR/CI info via `gh` if it's installed and authenticated
+    /// (optional, hidden if `gh` isn't available). Only asked for a GitHub
+    /// origin: for any other host `gh` can only fail, after a network round
+    /// trip. Uses `gh`'s raw --json output parsed with System.Text.Json rather
+    /// than a jq filter string, to avoid fragile nested-quoting across the
+    /// process boundary.</summary>
+    public PullRequestInfo? ReadPullRequest(string workingDirectory, GitInfo local)
     {
-        var prJson = RunProcess(workingDirectory, "gh", "pr view --json url,state,statusCheckRollup");
+        if (!IsGitHubHost(local.OriginHost))
+            return null;
+
+        var prJson = _run(workingDirectory, "gh", ["pr", "view", "--json", "url,state,statusCheckRollup"]);
         if (prJson is null)
-            return info;
+            return null;
 
         try
         {
@@ -89,22 +121,47 @@ public static class GitInfoReader
                     : (first.TryGetProperty("state", out var st) ? st.GetString() : null);
             }
 
-            return info with { PullRequestUrl = url, PullRequestStatus = state, CiStatus = ciStatus };
+            return new PullRequestInfo(url, state, ciStatus);
         }
         catch
         {
-            return info; // Unexpected gh output shape - skip PR/CI enrichment, keep the rest.
+            return null; // Unexpected gh output shape - skip PR/CI enrichment, keep the rest.
         }
     }
 
-    private static string? RunGit(string workingDirectory, string arguments) =>
-        RunProcess(workingDirectory, "git", arguments);
+    /// <summary>The local state with the pull request's fields filled in (or cleared).</summary>
+    public static GitInfo WithPullRequest(GitInfo info, PullRequestInfo? pr) =>
+        info with { PullRequestUrl = pr?.Url, PullRequestStatus = pr?.State, CiStatus = pr?.CiStatus };
 
-    internal static string? RunProcess(string workingDirectory, string fileName, string arguments)
+    private string? RunGit(string workingDirectory, params string[] arguments) =>
+        _run(workingDirectory, "git", GitArguments(arguments));
+
+    /// <summary>A git command line that runs no program the repository's
+    /// config names: no file-system monitor hook (git status would start it).
+    /// An external diff and textconv filters are turned off on the diff
+    /// itself.</summary>
+    internal static IReadOnlyList<string> GitArguments(params string[] arguments) =>
+        ["-c", "core.fsmonitor=false", .. arguments];
+
+    /// <summary>Set for every process: never wait on a prompt (a credential
+    /// dialog, a terminal question, gh's update notice), and never take
+    /// git's index.lock for status's opportunistic index refresh - a
+    /// background poller must never make the user's own git commands fail
+    /// with "another git process seems to be running".</summary>
+    internal static readonly IReadOnlyDictionary<string, string> QuietEnvironment = new Dictionary<string, string>
+    {
+        ["GIT_OPTIONAL_LOCKS"] = "0",
+        ["GIT_TERMINAL_PROMPT"] = "0",
+        ["GCM_INTERACTIVE"] = "never",
+        ["GH_PROMPT_DISABLED"] = "1",
+        ["GH_NO_UPDATE_NOTIFIER"] = "1"
+    };
+
+    internal static string? RunProcess(string workingDirectory, string fileName, IReadOnlyList<string> arguments)
     {
         try
         {
-            var psi = new ProcessStartInfo(fileName, arguments)
+            var psi = new ProcessStartInfo(fileName)
             {
                 WorkingDirectory = workingDirectory,
                 RedirectStandardOutput = true,
@@ -112,10 +169,10 @@ public static class GitInfoReader
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
-            // Don't take index.lock for status's opportunistic index refresh -
-            // a background poller must never make the user's own git commands
-            // fail with "another git process seems to be running".
-            psi.Environment["GIT_OPTIONAL_LOCKS"] = "0";
+            foreach (var argument in arguments)
+                psi.ArgumentList.Add(argument);
+            foreach (var (name, value) in QuietEnvironment)
+                psi.Environment[name] = value;
 
             using var process = Process.Start(psi);
             if (process is null) return null;
@@ -146,6 +203,41 @@ public static class GitInfoReader
             // treat as "tool not available", never throw.
             return null;
         }
+    }
+
+    /// <summary>github.com and its hosts (ssh.github.com, a GitHub
+    /// Enterprise Cloud *.ghe.com), or an Enterprise Server named
+    /// github.&lt;company&gt;: the hosts `gh` can answer for.</summary>
+    internal static bool IsGitHubHost(string? host)
+    {
+        if (string.IsNullOrEmpty(host))
+            return false;
+        host = host.ToLowerInvariant();
+        return host == "github.com" || host.EndsWith(".github.com", StringComparison.Ordinal) ||
+               host.EndsWith(".ghe.com", StringComparison.Ordinal) || host.StartsWith("github.", StringComparison.Ordinal);
+    }
+
+    /// <summary>The host of a remote URL: "https://user@host:8443/o/r.git",
+    /// "ssh://git@host/o/r" or the scp form "git@host:o/r.git"; null for a
+    /// local path or no remote.</summary>
+    internal static string? RemoteHost(string? remoteUrl)
+    {
+        if (string.IsNullOrWhiteSpace(remoteUrl))
+            return null;
+        var url = remoteUrl.Trim();
+        if (url.Contains("://", StringComparison.Ordinal))
+            return Uri.TryCreate(url, UriKind.Absolute, out var uri) && !uri.IsFile && uri.Host.Length > 0 ? uri.Host : null;
+
+        // scp-like syntax: [user@]host:path. A Windows drive ("C:\repo") or a
+        // relative path with a slash before the colon is a local path.
+        var colon = url.IndexOf(':');
+        var slash = url.IndexOfAny(['/', '\\']);
+        if (colon <= 0 || (slash >= 0 && slash < colon))
+            return null;
+        var host = url[..colon];
+        var at = host.LastIndexOf('@');
+        host = at >= 0 ? host[(at + 1)..] : host;
+        return host.Length > 1 ? host : null;
     }
 
     internal sealed record StatusV2(

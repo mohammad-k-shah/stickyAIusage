@@ -1,0 +1,29 @@
+# Weekly version updates for the NuGet packages and the GitHub Actions the
+# workflows use, as one grouped pull request per ecosystem into develop.
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      nuget:
+        patterns: [ '*' ]
+    ignore:
+      # Avalonia 12 changes APIs the Mac app uses (the clipboard, pointer
+      # events, native menus): moving to it is a piece of work of its own, and
+      # inside the group it would hold back every other update.
+      - dependency-name: 'Avalonia*'
+        update-types: [ 'version-update:semver-major' ]
+
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      github-actions:
+        patterns: [ '*' ]

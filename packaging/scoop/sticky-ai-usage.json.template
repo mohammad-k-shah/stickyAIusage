@@ -1,0 +1,34 @@
+{
+    "version": "{{VERSION}}",
+    "description": "Your Claude Code limits in the Windows taskbar, when you will hit them at this pace, and which session needs you.",
+    "homepage": "https://github.com/mohammad-k-shah/stickyAIusage",
+    "license": "MIT",
+    "notes": [
+        "Sticky AI Usage sits in your taskbar, left of the tray icons. For your plan limits, add the companion Claude Code plugin:",
+        "  /plugin install sticky-usage --marketplace mohammad-k-shah/stickyAIusage   (inside Claude Code)",
+        "Settings and logs live in %LOCALAPPDATA%\\StickyAIusage and stay when the app is removed."
+    ],
+    "architecture": {
+        "64bit": {
+            "url": "https://github.com/mohammad-k-shah/stickyAIusage/releases/download/v{{VERSION}}/StickyAIusage-win-x64.zip",
+            "hash": "{{SHA256:StickyAIusage-win-x64.zip}}"
+        }
+    },
+    "shortcuts": [
+        [
+            "StickyAIusage.exe",
+            "Sticky AI Usage"
+        ]
+    ],
+    "checkver": "github",
+    "autoupdate": {
+        "architecture": {
+            "64bit": {
+                "url": "https://github.com/mohammad-k-shah/stickyAIusage/releases/download/v$version/StickyAIusage-win-x64.zip"
+            }
+        },
+        "hash": {
+            "url": "$baseurl/checksums.txt"
+        }
+    }
+}

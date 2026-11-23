@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "name": "idle only",
+  "note": "No rise: the rate is unknown, confidence none, no limit time. The window average still gives a projection (not shown by the widget).",
+  "kind": "five_hour",
+  "now": "2026-11-17T14:00:00Z",
+  "resetsInMinutes": 200,
+  "lengthMinutes": 300,
+  "wholePointsOnly": false,
+  "samples": [
+    {
+      "minutes": -30,
+      "percent": 30
+    },
+    {
+      "minutes": -20,
+      "percent": 30
+    },
+    {
+      "minutes": -10,
+      "percent": 30
+    },
+    {
+      "minutes": 0,
+      "percent": 30
+    }
+  ],
+  "tolerance": {
+    "hitsLimitMinutes": 2,
+    "percent": 1,
+    "ratePerHourRelative": 0.02
+  },
+  "expected": {
+    "percentNow": 30,
+    "rateKnown": false,
+    "ratePerHour": null,
+    "hitsLimitInMinutes": null,
+    "projectedAtReset": 90,
+    "aheadOfEvenPace": -3.3,
+    "confidence": "none"
+  }
+}

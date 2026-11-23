@@ -48,6 +48,26 @@ internal static class MacNative
     [DllImport(ObjC, EntryPoint = "objc_msgSend")] private static extern void SendBool(IntPtr receiver, IntPtr selector, bool value);
     [DllImport(ObjC, EntryPoint = "objc_msgSend")] private static extern CGRect SendRect(IntPtr receiver, IntPtr selector);
     [DllImport(ObjC, EntryPoint = "objc_msgSend")] private static extern bool SendBoolRet(IntPtr receiver, IntPtr selector, IntPtr arg);
+    [DllImport(ObjC, EntryPoint = "objc_msgSend")] [return: MarshalAs(UnmanagedType.I1)] private static extern bool SendBoolGet(IntPtr receiver, IntPtr selector);
+
+    /// <summary>True when System Settings → Accessibility → Display → Reduce
+    /// motion is on (NSWorkspace.accessibilityDisplayShouldReduceMotion).
+    /// False off macOS or when it can't be read.</summary>
+    public static bool ReduceMotion()
+    {
+        if (!OperatingSystem.IsMacOS())
+            return false;
+        try
+        {
+            var workspace = Send(objc_getClass("NSWorkspace"), sel_registerName("sharedWorkspace"));
+            return workspace != IntPtr.Zero && SendBoolGet(workspace, sel_registerName("accessibilityDisplayShouldReduceMotion"));
+        }
+        catch (Exception ex)
+        {
+            DiagnosticLog.WriteError("MacNative.ReduceMotion", ex);
+            return false;
+        }
+    }
 
     /// <summary>
     /// Brings the app to the front, the way a menu bar app does when its

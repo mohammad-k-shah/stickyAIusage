@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "name": "limit time never in the past",
+  "note": "95% 9 minutes ago at 60/h would have reached 100% 4 minutes ago: the limit time is now, never in the past.",
+  "kind": "five_hour",
+  "now": "2026-11-17T14:00:00Z",
+  "resetsInMinutes": 100,
+  "lengthMinutes": 300,
+  "wholePointsOnly": false,
+  "samples": [
+    {
+      "minutes": -39,
+      "percent": 65
+    },
+    {
+      "minutes": -34,
+      "percent": 70
+    },
+    {
+      "minutes": -29,
+      "percent": 75
+    },
+    {
+      "minutes": -24,
+      "percent": 80
+    },
+    {
+      "minutes": -19,
+      "percent": 85
+    },
+    {
+      "minutes": -14,
+      "percent": 90
+    },
+    {
+      "minutes": -9,
+      "percent": 95
+    }
+  ],
+  "tolerance": {
+    "hitsLimitMinutes": 2,
+    "percent": 1,
+    "ratePerHourRelative": 0.02
+  },
+  "expected": {
+    "percentNow": 95,
+    "rateKnown": true,
+    "ratePerHour": 60,
+    "hitsLimitInMinutes": 0,
+    "projectedAtReset": 204,
+    "aheadOfEvenPace": 28.3,
+    "confidence": "low"
+  }
+}

@@ -10,7 +10,28 @@ public sealed class ProgressRing : FrameworkElement
 {
     public static readonly DependencyProperty ValueProperty = DependencyProperty.Register(
         nameof(Value), typeof(double), typeof(ProgressRing),
+        new FrameworkPropertyMetadata(0.0, OnValueChanged));
+
+    /// <summary>The value drawn: follows <see cref="Value"/> over 300 ms
+    /// (<see cref="Motion"/>), or at once when animations are off.</summary>
+    private static readonly DependencyProperty ShownValueProperty = DependencyProperty.Register(
+        "ShownValue", typeof(double), typeof(ProgressRing),
         new FrameworkPropertyMetadata(0.0, FrameworkPropertyMetadataOptions.AffectsRender));
+
+    private static void OnValueChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        var ring = (ProgressRing)d;
+        var to = (double)e.NewValue;
+        if (!Motion.Allowed)
+        {
+            ring.BeginAnimation(ShownValueProperty, null);
+            ring.SetValue(ShownValueProperty, to);
+            return;
+        }
+        var from = (double)ring.GetValue(ShownValueProperty);
+        ring.BeginAnimation(ShownValueProperty,
+            new System.Windows.Media.Animation.DoubleAnimation(from, to, Motion.Length) { EasingFunction = Motion.Easing });
+    }
 
     public static readonly DependencyProperty ThicknessProperty = DependencyProperty.Register(
         nameof(Thickness), typeof(double), typeof(ProgressRing),
@@ -57,7 +78,7 @@ public sealed class ProgressRing : FrameworkElement
         var center = new Point(ActualWidth / 2, ActualHeight / 2);
         dc.DrawEllipse(null, new Pen(TrackBrush, Thickness), center, radius, radius);
 
-        var value = Math.Clamp(Value, 0, 100);
+        var value = Math.Clamp((double)GetValue(ShownValueProperty), 0, 100);
         if (value <= 0)
             return;
 

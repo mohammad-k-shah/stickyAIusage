@@ -40,6 +40,16 @@ public static class TaskbarInterop
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern int GetClassName(IntPtr hWnd, System.Text.StringBuilder className, int maxCount);
 
+    [DllImport("user32.dll")]
+    private static extern bool AllowSetForegroundWindow(uint processId);
+
+    private const uint AsfwAny = 0xFFFFFFFF;
+
+    /// <summary>Called by a second launch, which owns the foreground: lets
+    /// the running copy bring its flyout to the front instead of opening it
+    /// behind the active window.</summary>
+    public static void AllowAnyProcessToTakeForeground() => AllowSetForegroundWindow(AsfwAny);
+
     private static readonly IntPtr HwndTopmost = new(-1);
     private const uint SwpNoSize = 0x1, SwpNoMove = 0x2, SwpNoActivate = 0x10;
 

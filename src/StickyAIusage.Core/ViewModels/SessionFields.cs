@@ -52,8 +52,9 @@ public static class SessionFields
             s => Format.ModelName(s.Model));
         Add("effort", "Effort", FieldCategory.Core, "Thinking effort: Low, Medium, High, Extra high, Max or Ultracode",
             s => Format.Effort(s.ThinkingEffort));
-        Add("cost", "Cost", FieldCategory.Session, "Estimated cost of the session so far",
-            s => Format.Usd(s.EstimatedCostUsd));
+        Add("cost", "Cost", FieldCategory.Session,
+            "Cost of the session so far: Claude Code's own figure, or an estimate at list prices (≈ for an unknown model)",
+            Format.SessionCost);
         Add("session-name", "Session name", FieldCategory.Session, "The name Claude Code gave the conversation",
             s => Blank(s.SessionName));
         Add("session-id", "Session ID", FieldCategory.Core, "First 8 characters of the session's id",
@@ -67,7 +68,7 @@ public static class SessionFields
         Add("last-active", "Last active", FieldCategory.Session, "How long ago the session last did anything",
             s => Format.Ago(DateTimeOffset.Now - s.LastActivityAt));
         Add("started", "Started", FieldCategory.Session, "Local time of the session's first message",
-            s => s.StartedAt.ToLocalTime().ToString("h:mm tt"));
+            s => Format.ShortTime(s.StartedAt));
         Add("compactions", "Compactions", FieldCategory.Context, "How many times the conversation was compacted",
             s => s.CompactionCount > 0 ? s.CompactionCount.ToString() : null);
         Add("skills", "Skills", FieldCategory.Session, "Skills used in the session",

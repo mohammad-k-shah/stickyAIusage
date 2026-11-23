@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "name": "whole points steady",
+  "note": "1 point per 10 min = 6/h (rise 3 >= 2); 87 left = 870 min, after the reset. Projection 13 + 12 = 25. 4 samples: low.",
+  "kind": "five_hour",
+  "now": "2026-11-17T14:00:00Z",
+  "resetsInMinutes": 120,
+  "lengthMinutes": 300,
+  "wholePointsOnly": true,
+  "samples": [
+    {
+      "minutes": -30,
+      "percent": 10
+    },
+    {
+      "minutes": -20,
+      "percent": 11
+    },
+    {
+      "minutes": -10,
+      "percent": 12
+    },
+    {
+      "minutes": 0,
+      "percent": 13
+    }
+  ],
+  "tolerance": {
+    "hitsLimitMinutes": 2,
+    "percent": 1,
+    "ratePerHourRelative": 0.02
+  },
+  "expected": {
+    "percentNow": 13,
+    "rateKnown": true,
+    "ratePerHour": 6,
+    "hitsLimitInMinutes": null,
+    "projectedAtReset": 25,
+    "aheadOfEvenPace": -47,
+    "confidence": "low"
+  }
+}

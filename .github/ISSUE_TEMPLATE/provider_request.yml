@@ -1,0 +1,39 @@
+name: Another AI tool
+description: Show the limits of another coding tool beside Claude's (as Codex already is).
+labels: ["provider"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The rules for a new tool are in the [provider guide](https://github.com/mohammad-k-shah/stickyAIusage/blob/main/docs/PROVIDERS.md):
+        local files or a documented interface first; anything undocumented only opt-in, off by default and labelled.
+  - type: input
+    id: tool
+    attributes:
+      label: Which tool
+      placeholder: "Gemini CLI, GitHub Copilot, Cursor…"
+    validations:
+      required: true
+  - type: textarea
+    id: where
+    attributes:
+      label: Where its usage lives
+      description: >-
+        A local file and its format, a documented API, or only an undocumented one. Links to the tool's own docs help.
+    validations:
+      required: true
+  - type: dropdown
+    id: official
+    attributes:
+      label: Is that source documented by the tool's maker?
+      options:
+        - "Yes"
+        - "No"
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: limits
+    attributes:
+      label: Which limits it has
+      description: Windows (5-hour, daily, weekly, monthly), credits, a spend cap…

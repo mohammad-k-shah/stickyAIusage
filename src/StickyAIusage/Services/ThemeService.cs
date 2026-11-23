@@ -6,7 +6,8 @@ namespace StickyAIusage.Services;
 
 /// <summary>
 /// Light/dark appearance for the whole app, the counterpart of the macOS
-/// ThemeService. The preference is "dark" by default; on "system" Windows
+/// ThemeService. The preference is "system" for new installs and is kept
+/// across restarts (older settings files keep "dark"); on "system" Windows
 /// records the app appearance in HKCU ...\Themes\Personalize\AppsUseLightTheme
 /// and raises a user-preference change when it's switched, so the widget
 /// follows along without a restart. The sun/moon button pins light or dark.

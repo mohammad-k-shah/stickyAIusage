@@ -1,0 +1,62 @@
+{
+  "schema": 1,
+  "name": "weekly with a night",
+  "note": "Rises yesterday and today, nothing overnight. Over 24 hours (hours from the first sample 0,2,4,6,19..23, mean 13): slope 400/750 = 0.533/h, R2 0.89, 9 samples over 23 h: high. 44 left = 82.5 h, after the reset in 72 h. Projection 56 + 0.533 x 72 = 94.4. Elapsed 4 of 7 days = even 57.1, so -1.1.",
+  "kind": "seven_day",
+  "now": "2026-11-17T14:00:00Z",
+  "resetsInMinutes": 4320,
+  "lengthMinutes": 10080,
+  "wholePointsOnly": false,
+  "samples": [
+    {
+      "minutes": -1380,
+      "percent": 40
+    },
+    {
+      "minutes": -1260,
+      "percent": 42
+    },
+    {
+      "minutes": -1140,
+      "percent": 44
+    },
+    {
+      "minutes": -1020,
+      "percent": 46
+    },
+    {
+      "minutes": -240,
+      "percent": 48
+    },
+    {
+      "minutes": -180,
+      "percent": 50
+    },
+    {
+      "minutes": -120,
+      "percent": 52
+    },
+    {
+      "minutes": -60,
+      "percent": 54
+    },
+    {
+      "minutes": 0,
+      "percent": 56
+    }
+  ],
+  "tolerance": {
+    "hitsLimitMinutes": 2,
+    "percent": 1,
+    "ratePerHourRelative": 0.02
+  },
+  "expected": {
+    "percentNow": 56,
+    "rateKnown": true,
+    "ratePerHour": 0.5333,
+    "hitsLimitInMinutes": null,
+    "projectedAtReset": 94.4,
+    "aheadOfEvenPace": -1.1,
+    "confidence": "high"
+  }
+}

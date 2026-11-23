@@ -1,0 +1,16 @@
+{
+  "name": "sticky-ai-usage",
+  "owner": {
+    "name": "Mohammad Karimulla Shah"
+  },
+  "metadata": {
+    "description": "The Claude Code companion plugin of the Sticky AI Usage desktop widget."
+  },
+  "plugins": [
+    {
+      "name": "sticky-usage",
+      "source": "./plugin",
+      "description": "Your Claude plan limits inside Claude Code (/pace, a usage tool for Claude, a band above the prompt, a budget guard before subagents start) and the feed for the Sticky AI Usage desktop widget. No network, no sign-in."
+    }
+  ]
+}

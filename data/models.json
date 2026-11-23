@@ -1,0 +1,47 @@
+{
+  "schema": 1,
+  "updated": "2026-11-17",
+  "source": "https://platform.claude.com/docs/en/about-claude/pricing",
+  "about": "List prices in US dollars per million tokens, used to estimate what a Claude Code session cost. Rows are tried top-down: the first row whose 'match' (a regular expression, case-insensitive) is found in the model id and whose version range holds the model's version wins. Cache writes cost 'rules.cacheWrite5m' / 'rules.cacheWrite1h' times the input price unless a row sets 'cacheWrite5m' / 'cacheWrite1h'. A row without 'cacheRead' gets 0.1x input. 'fastMultiplier' applies to the whole response in fast mode; 'longPrompt' prices a response whose prompt (input + cache reads + cache writes) is above 'aboveTokens'. Contributing: CONTRIBUTING.md, 'Update the price list'.",
+  "rules": { "cacheWrite5m": 1.25, "cacheWrite1h": 2, "usOnly": 1.1 },
+  "models": [
+    { "name": "Claude Fable 5.2, Claude Mythos 5.2", "match": "fable|mythos", "minVersion": 5.2, "maxVersion": 5.2,
+      "input": 8, "output": 40, "cacheRead": 0.20, "fastMultiplier": 2, "contextWindow": 1000000 },
+    { "name": "Claude Fable 5.1, Claude Mythos 5.1", "match": "fable|mythos", "minVersion": 5.1, "maxVersion": 5.1,
+      "input": 10, "output": 50, "cacheRead": 0.25, "contextWindow": 1000000 },
+    { "name": "Claude Fable 5, Claude Mythos 5", "match": "fable|mythos", "minVersion": 5, "maxVersion": 5,
+      "input": 10, "output": 50, "cacheRead": 1, "contextWindow": 1000000 },
+
+    { "name": "Claude Opus 5.5", "match": "opus", "minVersion": 5.5, "maxVersion": 5.5,
+      "input": 4, "output": 20, "cacheRead": 0.20, "fastMultiplier": 2, "contextWindow": 1000000 },
+    { "name": "Claude Opus 5, Claude Opus 4.8", "match": "opus", "minVersion": 4.8, "maxVersion": 5,
+      "input": 5, "output": 25, "cacheRead": 0.50, "fastMultiplier": 2, "contextWindow": 1000000 },
+    { "name": "Claude Opus 4.7, Claude Opus 4.6", "match": "opus", "minVersion": 4.6, "maxVersion": 4.7,
+      "input": 5, "output": 25, "cacheRead": 0.50, "contextWindow": 1000000 },
+    { "name": "Claude Opus 4.5", "match": "opus", "minVersion": 4.5, "maxVersion": 4.5,
+      "input": 5, "output": 25, "cacheRead": 0.50, "contextWindow": 200000 },
+    { "name": "Claude Opus 4.1, Claude Opus 4, Claude 3 Opus", "match": "opus", "minVersion": 0, "maxVersion": 4.1,
+      "input": 15, "output": 75, "cacheRead": 1.50, "contextWindow": 200000 },
+
+    { "name": "Claude Sonnet 5.5", "match": "sonnet", "minVersion": 5.5, "maxVersion": 5.5,
+      "input": 2, "output": 10, "cacheRead": 0.10, "contextWindow": 1000000 },
+    { "name": "Claude Sonnet 5", "match": "sonnet", "minVersion": 5, "maxVersion": 5,
+      "input": 2, "output": 10, "cacheRead": 0.20, "contextWindow": 1000000 },
+    { "name": "Claude Sonnet 4.6", "match": "sonnet", "minVersion": 4.6, "maxVersion": 4.6,
+      "input": 3, "output": 15, "cacheRead": 0.30, "contextWindow": 1000000 },
+    { "name": "Claude Sonnet 4.5, Claude Sonnet 4, Claude 3.x Sonnet", "match": "sonnet", "minVersion": 0, "maxVersion": 4.5,
+      "input": 3, "output": 15, "cacheRead": 0.30, "contextWindow": 200000 },
+
+    { "name": "Claude Haiku 5.5", "match": "haiku", "minVersion": 5.5, "maxVersion": 5.5,
+      "input": 0.10, "output": 0.50, "cacheRead": 0.01, "contextWindow": 1000000,
+      "longPrompt": { "aboveTokens": 100000, "input": 0.50, "output": 2.50, "cacheRead": 0.05 } },
+    { "name": "Claude Haiku 4.5", "match": "haiku", "minVersion": 4.5, "maxVersion": 4.5,
+      "input": 1, "output": 5, "cacheRead": 0.10, "contextWindow": 200000 },
+    { "name": "Claude 3.5 Haiku (retired; last listed prices)", "match": "haiku", "minVersion": 3.5, "maxVersion": 3.5,
+      "input": 0.80, "output": 4, "cacheRead": 0.08, "contextWindow": 200000 },
+    { "name": "Claude 3 Haiku (retired; last listed prices)", "match": "haiku", "minVersion": 0, "maxVersion": 3,
+      "input": 0.25, "output": 1.25, "cacheRead": 0.03, "contextWindow": 200000 }
+  ],
+  "fallback": { "name": "Fallback for unknown models (Claude Sonnet 4.6 prices)", "input": 3, "output": 15, "cacheRead": 0.30,
+    "contextWindow": 200000 }
+}

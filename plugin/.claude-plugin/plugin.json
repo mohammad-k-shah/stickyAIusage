@@ -1,0 +1,68 @@
+{
+  "name": "sticky-usage",
+  "version": "2.3.1",
+  "description": "Your Claude plan limits inside Claude Code: /pace, a usage tool Claude can call, a quiet band above the prompt, a budget guard before subagents start, and the feed for the Sticky AI Usage desktop widget. No network, no sign-in.",
+  "author": { "name": "Mohammad Karimulla Shah" },
+  "homepage": "https://github.com/mohammad-k-shah/stickyAIusage",
+  "repository": "https://github.com/mohammad-k-shah/stickyAIusage",
+  "license": "MIT",
+  "keywords": ["claude-code", "usage", "usage-limits", "rate-limits", "pace", "forecast", "cost", "subagents", "widget", "taskbar", "menu-bar"],
+  "userConfig": {
+    "feed": {
+      "type": "boolean",
+      "title": "Write the usage feed",
+      "description": "Write this session's usage and what it is doing (working, waiting for you, done) to the Sticky AI Usage widget's feed folder. Off: no feed and no session lights.",
+      "default": true
+    },
+    "band": {
+      "type": "string",
+      "title": "Usage band above the prompt",
+      "description": "auto: shows once a limit is half used or the pace says you will hit it before the reset; always; never.",
+      "options": ["auto", "always", "never"],
+      "default": "auto"
+    },
+    "contextNote": {
+      "type": "boolean",
+      "title": "Usage note for Claude near a limit",
+      "description": "Near a limit, add one short note beside your prompt so Claude plans smaller steps (at most once every ten prompts).",
+      "default": true
+    },
+    "contextNoteThreshold": {
+      "type": "number",
+      "title": "Usage note from (percent)",
+      "description": "The percent of a limit window at which the usage note starts (1 to 100).",
+      "default": 80
+    },
+    "exposeTool": {
+      "type": "boolean",
+      "title": "Usage tool for Claude",
+      "description": "Let Claude look up your plan usage with the usage_status tool (about 60 tokens of context).",
+      "default": true
+    },
+    "guard": {
+      "type": "string",
+      "title": "Budget guard for subagents",
+      "description": "Near a limit, before subagents start. ask: one question (run anyway, use the guard model, or skip them); downshift: run them on the guard model and say so; off.",
+      "options": ["ask", "downshift", "off"],
+      "default": "ask"
+    },
+    "guardThreshold": {
+      "type": "number",
+      "title": "Budget guard from (percent)",
+      "description": "The percent of the 5-hour window at which the guard starts (1 to 100). It also starts when the pace says the limit is near, or at 97% of the week.",
+      "default": 90
+    },
+    "guardLeadMinutes": {
+      "type": "number",
+      "title": "Budget guard lead time (minutes)",
+      "description": "The guard also starts when the pace says the 5-hour limit comes within this many minutes (0 to 600).",
+      "default": 15
+    },
+    "guardModel": {
+      "type": "string",
+      "title": "Budget guard model",
+      "description": "The smaller model subagents run on when you choose it, or in downshift: an alias such as haiku or sonnet, or a full model id.",
+      "default": "haiku"
+    }
+  }
+}

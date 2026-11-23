@@ -39,6 +39,20 @@ public sealed class SessionInfo
     /// Services/PriceTable.cs. Not the authoritative billed amount.</summary>
     public decimal EstimatedCostUsd { get; set; }
 
+    /// <summary>The estimate used a model the price list doesn't know, so it is
+    /// rough (shown with "≈").</summary>
+    public bool CostIsRough { get; init; }
+
+    /// <summary>Claude Code's own figure for this session, from the companion
+    /// plugin's feed, when it covers the whole session (see SessionCosts).</summary>
+    public decimal? ExactCostUsd { get; set; }
+
+    public bool CostIsExact => ExactCostUsd is not null;
+
+    /// <summary>What the cards and the pill show: Claude Code's own figure
+    /// when there is one, the estimate otherwise.</summary>
+    public decimal CostUsd => ExactCostUsd ?? EstimatedCostUsd;
+
     public GitInfo? Git { get; set; }
 
     public TimeSpan Elapsed => LastActivityAt - StartedAt;
@@ -59,6 +73,8 @@ public sealed record GitInfo
     public int Deletions { get; init; }
     public bool IsClean => StagedCount == 0 && UnstagedCount == 0 && UntrackedCount == 0;
     public string? RootDirectoryName { get; init; }
+    /// <summary>The host of the origin remote ("github.com", "gitlab.com"); null without one.</summary>
+    public string? OriginHost { get; init; }
     public string? OriginOwner { get; init; }
     public string? OriginRepo { get; init; }
     public string? UpstreamOwner { get; init; }

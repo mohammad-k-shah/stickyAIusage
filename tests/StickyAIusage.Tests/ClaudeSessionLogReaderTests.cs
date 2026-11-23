@@ -5,9 +5,16 @@ namespace StickyAIusage.Tests;
 public class ClaudeSessionLogReaderTests : IDisposable
 {
     private readonly TempDir _root = new();
+    private readonly ClaudeSessionLogSource _sessions;
     private static readonly DateTimeOffset Now = DateTimeOffset.UtcNow;
 
-    public void Dispose() => _root.Dispose();
+    public ClaudeSessionLogReaderTests() => _sessions = new ClaudeSessionLogSource(_root.Path);
+
+    public void Dispose()
+    {
+        _sessions.Dispose();
+        _root.Dispose();
+    }
 
     private string SessionFile(string sessionId) => _root.Combine("C--work-acme", sessionId + ".jsonl");
 
@@ -22,7 +29,7 @@ public class ClaudeSessionLogReaderTests : IDisposable
         lines.Add(Transcript.Assistant(id, "msg_B", Now, input: 2, output: 100, cacheRead: 1000, cacheWrite: 10));
         Transcript.Write(SessionFile(id), lines.ToArray());
 
-        var s = ClaudeSessionLogReader.ReadSession(SessionFile(id))!;
+        var s = _sessions.Reader.ReadSession(SessionFile(id))!;
 
         Assert.Equal(4, s.InputTokens);
         Assert.Equal(3038, s.OutputTokens);
@@ -46,7 +53,7 @@ public class ClaudeSessionLogReaderTests : IDisposable
             Transcript.Assistant(fork, "msg_F1", Now.AddMinutes(-6), input: 20, output: 1500, cacheRead: 1_500_000, cacheWrite: 200_000),
             Transcript.Assistant(fork, "msg_F2", Now, input: 30, output: 2500, cacheRead: 1_800_000, cacheWrite: 270_000));
 
-        var s = ClaudeSessionLogReader.ReadSession(SessionFile(fork))!;
+        var s = _sessions.Reader.ReadSession(SessionFile(fork))!;
 
         Assert.Equal(fork, s.SessionId);
         Assert.Equal(50, s.InputTokens);
@@ -68,7 +75,7 @@ public class ClaudeSessionLogReaderTests : IDisposable
             Transcript.User(otherId, Now.AddMinutes(-1)),
             Transcript.Assistant(otherId, "msg_1", Now, input: 5, output: 50));
 
-        var s = ClaudeSessionLogReader.ReadSession(SessionFile(fileId))!;
+        var s = _sessions.Reader.ReadSession(SessionFile(fileId))!;
 
         Assert.Equal(5, s.InputTokens);
         Assert.Equal(50, s.OutputTokens);
@@ -83,7 +90,7 @@ public class ClaudeSessionLogReaderTests : IDisposable
             Transcript.Assistant(id, "msg_1", Now, output: 100),
             Transcript.Assistant(id, "msg_2", Now, output: 9999, sidechain: true));
 
-        Assert.Equal(100, ClaudeSessionLogReader.ReadSession(SessionFile(id))!.OutputTokens);
+        Assert.Equal(100, _sessions.Reader.ReadSession(SessionFile(id))!.OutputTokens);
     }
 
     [Fact]
@@ -103,9 +110,9 @@ public class ClaudeSessionLogReaderTests : IDisposable
         File.SetLastWriteTime(subagentFile, DateTime.Now.AddSeconds(5));
         Transcript.Write(_root.Combine("C--work-acme", "notes.jsonl"), Transcript.User(id, Now));
 
-        var today = ClaudeSessionLogReader.GetSessionsForDate(DateOnly.FromDateTime(DateTime.Now), _root.Path);
-        var current = ClaudeSessionLogReader.GetMostRecentSession(_root.Path);
-        var activity = ClaudeSessionLogReader.GetMostRecentActivityUtc(_root.Path);
+        var today = _sessions.Reader.GetSessionsForDate(DateOnly.FromDateTime(DateTime.Now));
+        var current = _sessions.Reader.GetMostRecentSession();
+        var activity = _sessions.Reader.GetMostRecentActivityUtc();
 
         Assert.Equal(id, Assert.Single(today).SessionId);
         Assert.Equal(id, current!.SessionId);
@@ -117,8 +124,8 @@ public class ClaudeSessionLogReaderTests : IDisposable
     public void A_session_opened_without_sending_anything_is_not_listed()
     {
         // Claude Code writes a transcript as soon as it opens in a folder.
-        // Until a message is sent it has no tokens and costs $0.00, and the
-        // owner doesn't want those on the panel.
+        // Until a message is sent it has no tokens and costs $0.00, and such
+        // sessions would only clutter the panel.
         var empty = Guid.NewGuid().ToString();
         Transcript.Write(SessionFile(empty), Transcript.User(empty, Now));
 
@@ -127,11 +134,11 @@ public class ClaudeSessionLogReaderTests : IDisposable
             Transcript.User(worked, Now.AddMinutes(-1)),
             Transcript.Assistant(worked, "msg_1", Now, output: 100_000));
 
-        var today = ClaudeSessionLogReader.GetSessionsForDate(DateOnly.FromDateTime(DateTime.Now), _root.Path);
+        var today = _sessions.Reader.GetSessionsForDate(DateOnly.FromDateTime(DateTime.Now));
 
         Assert.Equal(worked, Assert.Single(today).SessionId);
-        Assert.Equal(2, ClaudeSessionLogReader.GetSessionsForDate(
-            DateOnly.FromDateTime(DateTime.Now), _root.Path, onlyWithWork: false).Count);
+        Assert.Equal(2, _sessions.Reader.GetSessionsForDate(
+            DateOnly.FromDateTime(DateTime.Now), onlyWithWork: false).Count);
     }
 
     [Fact]
@@ -147,8 +154,8 @@ public class ClaudeSessionLogReaderTests : IDisposable
             Transcript.Assistant(fresh, "msg_1", Now, output: 100_000));
 
         var today = DateOnly.FromDateTime(DateTime.Now);
-        List<string> Ids(int days) => ClaudeSessionLogReader
-            .GetSessionsInRange(today.AddDays(1 - days), today, _root.Path).Select(s => s.SessionId).ToList();
+        List<string> Ids(int days) => _sessions.Reader
+            .GetSessionsInRange(today.AddDays(1 - days), today).Select(s => s.SessionId).ToList();
 
         Assert.Equal([fresh], Ids(1));
         Assert.Equal([fresh], Ids(2));
@@ -163,22 +170,22 @@ public class ClaudeSessionLogReaderTests : IDisposable
         Transcript.Write(path,
             Transcript.User(id, Now.AddMinutes(-3)),
             Transcript.Assistant(id, "msg_1", Now.AddMinutes(-2), output: 100));
-        Assert.Equal(100, ClaudeSessionLogReader.ReadSession(path)!.OutputTokens);
+        Assert.Equal(100, _sessions.Reader.ReadSession(path)!.OutputTokens);
 
         // Claude Code mid-write: a line without its trailing newline yet.
         var next = Transcript.Assistant(id, "msg_2", Now.AddMinutes(-1), output: 50);
         Transcript.Append(path, next[..20]);
-        Assert.Equal(100, ClaudeSessionLogReader.ReadSession(path)!.OutputTokens);
+        Assert.Equal(100, _sessions.Reader.ReadSession(path)!.OutputTokens);
 
         Transcript.Append(path, next[20..] + "\n" + Transcript.Assistant(id, "msg_2", Now, output: 50) + "\n");
-        var incremental = ClaudeSessionLogReader.ReadSession(path)!;
+        var incremental = _sessions.Reader.ReadSession(path)!;
         Assert.Equal(150, incremental.OutputTokens);
 
         // Same content parsed from scratch (a copy is a new cache entry).
         var copy = _root.Combine("copy", id + ".jsonl");
         Directory.CreateDirectory(Path.GetDirectoryName(copy)!);
         File.Copy(path, copy);
-        var fresh = ClaudeSessionLogReader.ReadSession(copy)!;
+        var fresh = _sessions.Reader.ReadSession(copy)!;
         Assert.Equal(fresh.OutputTokens, incremental.OutputTokens);
         Assert.Equal(fresh.LastActivityAt, incremental.LastActivityAt);
     }
@@ -192,11 +199,11 @@ public class ClaudeSessionLogReaderTests : IDisposable
             Transcript.User(id, Now.AddMinutes(-3)),
             Transcript.Assistant(id, "msg_1", Now.AddMinutes(-2), output: 100),
             Transcript.Assistant(id, "msg_2", Now.AddMinutes(-1), output: 200));
-        Assert.Equal(300, ClaudeSessionLogReader.ReadSession(path)!.OutputTokens);
+        Assert.Equal(300, _sessions.Reader.ReadSession(path)!.OutputTokens);
 
         File.WriteAllText(path, Transcript.User(id, Now) + "\n" + Transcript.Assistant(id, "msg_9", Now, output: 7) + "\n");
 
-        Assert.Equal(7, ClaudeSessionLogReader.ReadSession(path)!.OutputTokens);
+        Assert.Equal(7, _sessions.Reader.ReadSession(path)!.OutputTokens);
     }
 }
 
@@ -206,6 +213,7 @@ public class EffortTests
     public void Effort_is_read_from_the_current_string_form_and_per_turn_overrides()
     {
         using var dir = new TempDir();
+        var reader = Readers.For(dir);
         var id = Guid.NewGuid().ToString();
         var path = dir.Combine("proj", id + ".jsonl");
         var now = DateTimeOffset.UtcNow;
@@ -217,9 +225,9 @@ public class EffortTests
         });
 
         Transcript.Write(path, Line("medium", null), Line("high", null));
-        Assert.Equal("high", ClaudeSessionLogReader.ReadSession(path)!.ThinkingEffort);
+        Assert.Equal("high", reader.ReadSession(path)!.ThinkingEffort);
 
         Transcript.Append(path, Line("high", "max") + "\n");
-        Assert.Equal("max", ClaudeSessionLogReader.ReadSession(path)!.ThinkingEffort);
+        Assert.Equal("max", reader.ReadSession(path)!.ThinkingEffort);
     }
 }

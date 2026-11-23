@@ -1,12 +1,42 @@
 name: Build
 
+# A change to documentation only starts no build. Run it by hand (Actions >
+# Build > Run workflow) to include the macOS job in a private copy of the repo.
 on:
   push:
     branches: [ main, develop ]
+    paths-ignore: [ 'docs/**', '**/*.md' ]
   pull_request:
+    paths-ignore: [ 'docs/**', '**/*.md' ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
+  plugin:
+    # The Claude Code plugin's pure helpers, with Node's own test runner (no packages).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Plugin helper tests
+        run: node --test plugin/hooks/*.test.mjs
+
+      # Claude Code's own checks of the plugin (the hooks module's rules, the
+      # manifest, the marketplace). Not a gate yet: it must first be shown to
+      # run in CI without a Claude sign-in.
+      - name: Validate the plugin (not blocking)
+        continue-on-error: true
+        run: |
+          npm install --global @anthropic-ai/claude-code
+          claude --version
+          claude plugin validate --strict ./plugin
+
   build-windows:
     runs-on: windows-latest
     steps:
@@ -15,7 +45,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '10.0.x'
 
       - name: Restore
         run: dotnet restore StickyAIusage.sln
@@ -31,13 +61,24 @@ jobs:
         env:
           UI_SCREENSHOT_DIR: ${{ github.workspace }}/ui-screenshots
 
+      # The macOS screens render headless on any OS, so they are checked on
+      # every push even where the macOS job doesn't run.
+      - name: macOS UI screenshot tests (headless)
+        run: dotnet test tests/StickyAIusage.Mac.UiTests/StickyAIusage.Mac.UiTests.csproj -c Release --no-restore
+        env:
+          UI_SCREENSHOT_DIR: ${{ github.workspace }}/ui-screenshots/mac
+
+      # Uploads are evidence, not checks: continue-on-error keeps a full artifact store (the account's
+      # quota) from failing the run or skipping the self-test after them; seven days keep the store small.
       - name: Upload UI screenshots
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: ui-screenshots
           path: ui-screenshots/**
           if-no-files-found: warn
+          retention-days: 7
 
       - name: Publish (framework-dependent win-x64)
         run: >
@@ -46,14 +87,129 @@ jobs:
           -p:PublishSingleFile=true
           -o publish
 
+      # The published exe starts in a temporary profile, builds every screen
+      # off-screen and exits 0, or 1 with the failing check (docs/CONTRIBUTING.md).
+      - name: Self-test the published exe
+        timeout-minutes: 3
+        run: |
+          & publish\StickyAIusage.exe --self-test self-test-windows.txt | Out-Host
+          if ($LASTEXITCODE -ne 0) { throw "The self-test failed (exit code $LASTEXITCODE)" }
+
+      - name: Upload the self-test report
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: self-test-windows
+          path: self-test-windows.txt
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Upload build artifact
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: StickyAIusage-win-x64
           path: publish/**
           if-no-files-found: error
+          retention-days: 7
+
+  installer:
+    # Builds the per-user installer from the self-contained exe and runs it the
+    # way winget does: silent install, checks, silent uninstall, checks.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Publish (self-contained single file, as released)
+        run: >
+          dotnet publish src/StickyAIusage/StickyAIusage.csproj
+          -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=embedded
+          -o publish
+
+      - name: Build the installer
+        run: |
+          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress }
+          & $iscc /DAppVersion=0.0.0-ci "/DSourceDir=$PWD\publish" "/O$PWD\setup" installer\windows\setup.iss
+          if ($LASTEXITCODE -ne 0) { throw "The installer didn't build (iscc exit code $LASTEXITCODE)" }
+
+      - name: Install, check, uninstall and check again (silent)
+        run: |
+          $app = Join-Path $env:LOCALAPPDATA 'Programs\Sticky AI Usage'
+          $exe = Join-Path $app 'StickyAIusage.exe'
+          $run = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
+          $silent = '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART'
+
+          $setup = Start-Process setup\StickyAIusage-Setup-x64.exe -ArgumentList ($silent + '/LOG=setup.log') -Wait -PassThru
+          if ($setup.ExitCode -ne 0) { throw "Setup exited with $($setup.ExitCode)" }
+          foreach ($file in $exe, (Join-Path $app 'unins000.exe'), (Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\Sticky AI Usage.lnk')) {
+            if (-not (Test-Path $file)) { throw "Missing after install: $file" }
+          }
+          # The winget manifest's ProductCode is this key's name.
+          if (-not (Test-Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{FF38E1A6-407C-4A95-A184-D8CC911BD1CB}_is1')) { throw 'No Apps entry under the expected ProductCode' }
+          # How it was installed, for the app's update notice: "setup" by hand.
+          $method = (Get-Content (Join-Path $app 'install-method') -Raw).Trim()
+          if ($method -ne 'setup') { throw "install-method says '$method' after a plain Setup run" }
+
+          # The installed copy starts (temporary profile, no window, nothing installed touched).
+          & $exe --self-test self-test-installed.txt | Out-Host
+          if ($LASTEXITCODE -ne 0) { throw "The installed exe's self-test failed (exit code $LASTEXITCODE)" }
+
+          # A running copy (it holds the single-instance mutex) stops a silent upgrade instead of being closed.
+          $widget = Start-Process $exe -PassThru
+          Start-Sleep -Seconds 10
+          $again = Start-Process setup\StickyAIusage-Setup-x64.exe -ArgumentList $silent -Wait -PassThru
+          if ($again.ExitCode -eq 0) { throw 'Setup went ahead while the widget was running' }
+          if ($widget.HasExited) { throw 'Setup closed the running widget' }
+          Stop-Process -Id $widget.Id
+          $widget.WaitForExit()
+
+          # winget's upgrade: the same Setup with the manifest's custom switch.
+          $winget = Start-Process setup\StickyAIusage-Setup-x64.exe -ArgumentList ($silent + '/CHANNEL=winget') -Wait -PassThru
+          if ($winget.ExitCode -ne 0) { throw "Setup with /CHANNEL=winget exited with $($winget.ExitCode)" }
+          $method = (Get-Content (Join-Path $app 'install-method') -Raw).Trim()
+          if ($method -ne 'winget') { throw "install-method says '$method' after winget's Setup run" }
+
+          # Uninstall removes this copy's start entry and leaves another copy's.
+          # (A fresh runner account has no Run key yet.)
+          if (-not (Test-Path $run)) { New-Item -Path $run -Force | Out-Null }
+          New-ItemProperty $run -Name StickyAIusage -Value "`"$exe`"" -Force | Out-Null
+          New-ItemProperty $run -Name StickyAIusage-other -Value '"C:\Elsewhere\StickyAIusage.exe" --profile other' -Force | Out-Null
+          Start-Process (Join-Path $app 'unins000.exe') -ArgumentList $silent -Wait | Out-Null
+          # The uninstaller finishes from a copy of itself in TEMP: wait for the folder to go.
+          $deadline = (Get-Date).AddSeconds(60)
+          while ((Test-Path $app) -and (Get-Date) -lt $deadline) { Start-Sleep -Seconds 1 }
+          if (Test-Path $app) { throw "Left behind after uninstall: $app" }
+          $left = (Get-Item $run).GetValueNames()
+          if ($left -contains 'StickyAIusage') { throw "This copy's start entry is still there" }
+          if ($left -notcontains 'StickyAIusage-other') { throw "Another copy's start entry was removed" }
+          # A silent uninstall (winget's) keeps the settings: the widget run above created them.
+          if (-not (Test-Path (Join-Path $env:LOCALAPPDATA 'StickyAIusage'))) { throw 'The settings folder was deleted' }
+
+      - name: Upload the setup log and the self-test report
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: setup-log
+          path: |
+            setup.log
+            self-test-installed.txt
+          if-no-files-found: ignore
+          retention-days: 7
 
   build-macos:
+    # macOS minutes cost ten times as much in a private repository, and the Mac
+    # screens are already rendered headless by build-windows: here it runs in
+    # the public repository, or when started by hand.
+    if: github.event.repository.visibility == 'public' || github.event_name == 'workflow_dispatch'
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -61,10 +217,16 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '10.0.x'
 
       - name: Unit tests (shared core)
-        run: dotnet test tests/StickyAIusage.Tests/StickyAIusage.Tests.csproj -c Release
+        run: |
+          # Hosted macOS runners sometimes deliver a file-watcher (FSEvents) event late: three watcher
+          # tests once timed out in a run between two that passed. One more try, said in the log.
+          dotnet test tests/StickyAIusage.Tests/StickyAIusage.Tests.csproj -c Release || {
+            echo "::warning::The unit tests failed once on macOS; running them again."
+            dotnet test tests/StickyAIusage.Tests/StickyAIusage.Tests.csproj -c Release
+          }
 
       - name: macOS UI screenshot tests
         run: dotnet test tests/StickyAIusage.Mac.UiTests/StickyAIusage.Mac.UiTests.csproj -c Release
@@ -73,18 +235,38 @@ jobs:
 
       - name: Upload macOS UI screenshots
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: mac-ui-screenshots
           path: mac-ui-screenshots/**
           if-no-files-found: warn
+          retention-days: 7
 
       - name: Build Sticky AI Usage.app (Apple Silicon)
         run: scripts/build-mac-app.sh osx-arm64
 
+      # The binary inside the bundle: Core checks, Avalonia's native platform,
+      # both themes and every asset, without a window.
+      - name: Self-test the app
+        timeout-minutes: 3
+        run: '"artifacts/mac/Sticky AI Usage.app/Contents/MacOS/StickyAIusage" --self-test self-test-mac.txt'
+
+      - name: Upload the self-test report
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: self-test-mac
+          path: self-test-mac.txt
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Upload app
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: StickyAIusage-mac-arm64
           path: artifacts/mac/StickyAIusage-osx-arm64.zip
           if-no-files-found: error
+          retention-days: 7

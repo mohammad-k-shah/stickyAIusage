@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "name": "too few samples",
+  "note": "Two samples: the rate needs three.",
+  "kind": "five_hour",
+  "now": "2026-11-17T14:00:00Z",
+  "resetsInMinutes": 200,
+  "lengthMinutes": 300,
+  "wholePointsOnly": false,
+  "samples": [
+    {
+      "minutes": -10,
+      "percent": 40
+    },
+    {
+      "minutes": 0,
+      "percent": 50
+    }
+  ],
+  "tolerance": {
+    "hitsLimitMinutes": 2,
+    "percent": 1,
+    "ratePerHourRelative": 0.02
+  },
+  "expected": {
+    "percentNow": 50,
+    "rateKnown": false,
+    "ratePerHour": null,
+    "hitsLimitInMinutes": null,
+    "aheadOfEvenPace": 16.7,
+    "confidence": "none"
+  }
+}

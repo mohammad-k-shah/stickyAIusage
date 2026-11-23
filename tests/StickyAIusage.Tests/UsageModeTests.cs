@@ -11,7 +11,7 @@ public class UsageModeDetectionTests
     private static UsageSnapshot Map(string json, string? subscription = null)
     {
         using var doc = JsonDocument.Parse(json);
-        return ClaudeUsageProvider.MapToSnapshot(doc.RootElement, subscription);
+        return ClaudeOAuthUsageSource.MapToSnapshot(doc.RootElement, subscription);
     }
 
     // Monthly-cap (Enterprise) response shape: spend block,
@@ -225,7 +225,7 @@ public class WidgetViewModelTests
         // The percentages stay (they were real once), but the pill says why
         // they are frozen instead of only ageing a timestamp.
         Assert.Equal("Sign in to Claude", vm.UpdatedText);
-        Assert.True(vm.NeedsSignIn);
+        Assert.Same(FlyoutNotice.SignIn, vm.Notice);
         Assert.Equal("5h: 43%", vm.PrimaryText);
         Assert.Contains("/login", vm.UsageTooltip);
     }
@@ -275,6 +275,9 @@ public class WidgetViewModelTests
     [Theory]
     [InlineData("StickyUsage", "Sticky Usage")]
     [InlineData("MyAIProject", "My AI Project")]
+    [InlineData("StickyAIusage", "Sticky AIusage")] // seen on a Mac as "Sticky A Iusage"
+    [InlineData("XMLParser", "XML Parser")]
+    [InlineData("IPhoneApp", "IPhone App")]
     [InlineData("acme-webapp", "acme-webapp")]
     [InlineData("webapp", "webapp")]
     public void Project_names_get_spaces_between_joined_words(string folder, string expected) =>
@@ -296,41 +299,13 @@ public class WidgetViewModelTests
     public void Plan_names(string? subscription, string? expected) => Assert.Equal(expected, Format.PlanName(subscription));
 }
 
-public class MacKeychainCredentialStoreTests
-{
-    [Fact]
-    public void Account_is_parsed_from_the_attribute_listing()
-    {
-        const string listing = """
-            keychain: "/Users/me/Library/Keychains/login.keychain-db"
-            class: "genp"
-            attributes:
-                "acct"<blob>="jdoe"
-                "svce"<blob>="Claude Code-credentials"
-            """;
-        Assert.Equal("jdoe", MacKeychainCredentialStore.ParseAccount(listing));
-        Assert.Null(MacKeychainCredentialStore.ParseAccount("nothing here"));
-    }
-
-    [Fact]
-    public void Update_command_quotes_names_and_hex_encodes_the_secret()
-    {
-        var json = """{"claudeAiOauth":{"accessToken":"a b\"c"}}""";
-        var command = MacKeychainCredentialStore.BuildUpdateCommand("j doe", "Claude Code-credentials", json);
-
-        Assert.StartsWith("add-generic-password -U -a \"j doe\" -s \"Claude Code-credentials\" -X ", command);
-        var hex = command[(command.LastIndexOf(' ') + 1)..];
-        Assert.Equal(json, Encoding.UTF8.GetString(Convert.FromHexString(hex)));
-    }
-}
-
-/// <summary>Round-trips a throwaway item through the real login Keychain.
+/// <summary>Reads a throwaway item from the real login Keychain.
 /// Opt-in (STICKYAIUSAGE_KEYCHAIN_TEST=1, macOS only) because it touches the
-/// developer's Keychain; it never reads or writes Claude's own item.</summary>
-public class MacKeychainRoundTripTests
+/// developer's Keychain; it never reads Claude's own item.</summary>
+public class MacKeychainReadTests
 {
     [Fact]
-    public void Write_updates_an_existing_item_in_place()
+    public void An_item_is_read_and_a_missing_one_reads_as_none()
     {
         if (!OperatingSystem.IsMacOS() || Environment.GetEnvironmentVariable("STICKYAIUSAGE_KEYCHAIN_TEST") != "1")
             return;
@@ -341,11 +316,6 @@ public class MacKeychainRoundTripTests
         {
             var store = new MacKeychainCredentialStore(service);
             Assert.Equal("{\"v\":1}", store.Read());
-
-            Assert.True(store.Write("{\"claudeAiOauth\":{\"accessToken\":\"x y\"}}"));
-            Assert.Equal("{\"claudeAiOauth\":{\"accessToken\":\"x y\"}}", store.Read());
-
-            // Updated in place, not added as a second item.
             Assert.Equal(0, Security("delete-generic-password", "-s", service));
             Assert.Null(store.Read());
         }
@@ -377,10 +347,10 @@ public class ResetDrivenFetchTests
     {
         var snapshot = new UsageSnapshot { FiveHourResetsAt = T, WeeklyResetsAt = T.AddDays(3) };
 
-        Assert.False(ClaudeUsageProvider.ResetPassedSinceLastFetch(snapshot, T.AddMinutes(-40), T.AddSeconds(5)));  // grace period
-        Assert.True(ClaudeUsageProvider.ResetPassedSinceLastFetch(snapshot, T.AddMinutes(-40), T.AddMinutes(1)));
-        Assert.False(ClaudeUsageProvider.ResetPassedSinceLastFetch(snapshot, T.AddMinutes(1), T.AddMinutes(2)));    // already refetched
-        Assert.False(ClaudeUsageProvider.ResetPassedSinceLastFetch(null, T, T.AddHours(1)));
+        Assert.False(ClaudeOAuthUsageSource.ResetPassedSinceLastFetch(snapshot, T.AddMinutes(-40), T.AddSeconds(5)));  // grace period
+        Assert.True(ClaudeOAuthUsageSource.ResetPassedSinceLastFetch(snapshot, T.AddMinutes(-40), T.AddMinutes(1)));
+        Assert.False(ClaudeOAuthUsageSource.ResetPassedSinceLastFetch(snapshot, T.AddMinutes(1), T.AddMinutes(2)));    // already refetched
+        Assert.False(ClaudeOAuthUsageSource.ResetPassedSinceLastFetch(null, T, T.AddHours(1)));
     }
 
     [Fact]
@@ -394,7 +364,7 @@ public class ResetDrivenFetchTests
              "spend":{"used":{"amount_minor":0,"currency":"USD","exponent":2},"limit":null,"percent":0,"enabled":false,
                       "balance":{"amount_minor":932,"currency":"USD","exponent":2}}}
             """);
-        var s = ClaudeUsageProvider.MapToSnapshot(doc.RootElement, "pro");
+        var s = ClaudeOAuthUsageSource.MapToSnapshot(doc.RootElement, "pro");
 
         Assert.Equal(UsageMode.PlanLimits, s.Mode); // spend with no limit isn't a monthly cap
         Assert.Equal(9.32m, s.CreditsRemaining);
@@ -482,29 +452,29 @@ public class FlyoutHeightCapTests
     [Fact]
     public void Repeated_rate_limits_back_off_longer_up_to_a_cap()
     {
-        Assert.Equal(TimeSpan.FromMinutes(2), ClaudeUsageProvider.RateLimitBackoff(null, 1));
-        Assert.Equal(TimeSpan.FromMinutes(8), ClaudeUsageProvider.RateLimitBackoff(null, 3));
-        Assert.Equal(TimeSpan.FromMinutes(30), ClaudeUsageProvider.RateLimitBackoff(null, 9));
-        Assert.Equal(TimeSpan.FromMinutes(30), ClaudeUsageProvider.RateLimitBackoff(TimeSpan.FromDays(3), 1));
+        Assert.Equal(TimeSpan.FromMinutes(2), ClaudeOAuthUsageSource.RateLimitBackoff(null, 1));
+        Assert.Equal(TimeSpan.FromMinutes(8), ClaudeOAuthUsageSource.RateLimitBackoff(null, 3));
+        Assert.Equal(TimeSpan.FromMinutes(30), ClaudeOAuthUsageSource.RateLimitBackoff(null, 9));
+        Assert.Equal(TimeSpan.FromMinutes(30), ClaudeOAuthUsageSource.RateLimitBackoff(TimeSpan.FromDays(3), 1));
     }
 
     [Fact]
     public void A_rate_limit_raises_the_polling_floor_and_a_success_lowers_it()
     {
         // From no floor, one 429 puts polling at twice the active interval.
-        var floor = ClaudeUsageProvider.RaiseFloor(TimeSpan.Zero);
+        var floor = ClaudeOAuthUsageSource.RaiseFloor(TimeSpan.Zero);
         Assert.Equal(TimeSpan.FromMinutes(1), floor);
 
-        floor = ClaudeUsageProvider.RaiseFloor(floor);
+        floor = ClaudeOAuthUsageSource.RaiseFloor(floor);
         Assert.Equal(TimeSpan.FromMinutes(2), floor);
 
         // Successes halve it, back down to "no floor" rather than stopping at 30s.
-        floor = ClaudeUsageProvider.LowerFloor(floor);
+        floor = ClaudeOAuthUsageSource.LowerFloor(floor);
         Assert.Equal(TimeSpan.FromMinutes(1), floor);
-        floor = ClaudeUsageProvider.LowerFloor(floor);
+        floor = ClaudeOAuthUsageSource.LowerFloor(floor);
         Assert.Equal(TimeSpan.FromSeconds(30), floor);
-        Assert.Equal(TimeSpan.Zero, ClaudeUsageProvider.LowerFloor(floor));
-        Assert.Equal(TimeSpan.Zero, ClaudeUsageProvider.LowerFloor(TimeSpan.Zero));
+        Assert.Equal(TimeSpan.Zero, ClaudeOAuthUsageSource.LowerFloor(floor));
+        Assert.Equal(TimeSpan.Zero, ClaudeOAuthUsageSource.LowerFloor(TimeSpan.Zero));
     }
 
     [Fact]
@@ -512,7 +482,7 @@ public class FlyoutHeightCapTests
     {
         var floor = TimeSpan.Zero;
         for (var i = 0; i < 20; i++)
-            floor = ClaudeUsageProvider.RaiseFloor(floor);
+            floor = ClaudeOAuthUsageSource.RaiseFloor(floor);
 
         Assert.Equal(TimeSpan.FromMinutes(30), floor);
     }

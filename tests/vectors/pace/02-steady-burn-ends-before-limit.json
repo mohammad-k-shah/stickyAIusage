@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "name": "steady burn ends before limit",
+  "note": "1 point every 5 minutes = 12/h; 74 left = 370 min, after the reset in 60: no limit time. Projection 26 + 12 = 38. Even 80, so -54.",
+  "kind": "five_hour",
+  "now": "2026-11-17T14:00:00Z",
+  "resetsInMinutes": 60,
+  "lengthMinutes": 300,
+  "wholePointsOnly": false,
+  "samples": [
+    {
+      "minutes": -30,
+      "percent": 20
+    },
+    {
+      "minutes": -25,
+      "percent": 21
+    },
+    {
+      "minutes": -20,
+      "percent": 22
+    },
+    {
+      "minutes": -15,
+      "percent": 23
+    },
+    {
+      "minutes": -10,
+      "percent": 24
+    },
+    {
+      "minutes": -5,
+      "percent": 25
+    },
+    {
+      "minutes": 0,
+      "percent": 26
+    }
+  ],
+  "tolerance": {
+    "hitsLimitMinutes": 2,
+    "percent": 1,
+    "ratePerHourRelative": 0.02
+  },
+  "expected": {
+    "percentNow": 26,
+    "rateKnown": true,
+    "ratePerHour": 12,
+    "hitsLimitInMinutes": null,
+    "projectedAtReset": 38,
+    "aheadOfEvenPace": -54,
+    "confidence": "high"
+  }
+}

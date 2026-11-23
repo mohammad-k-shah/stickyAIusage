@@ -108,12 +108,11 @@ public sealed class DailySpendTracker
         }
     }
 
-    private static void Save(string path, State state)
+    internal static void Save(string path, State state)
     {
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            File.WriteAllText(path, JsonSerializer.Serialize(state));
+            AtomicFile.WriteAllText(path, JsonSerializer.Serialize(state));
         }
         catch (Exception ex)
         {

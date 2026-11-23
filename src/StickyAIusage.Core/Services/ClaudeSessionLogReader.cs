@@ -2,6 +2,7 @@ using System.IO;
 using System.Text;
 using System.Text.Json;
 using StickyAIusage.Models;
+using StickyAIusage.Stats;
 
 namespace StickyAIusage.Services;
 
@@ -9,7 +10,8 @@ namespace StickyAIusage.Services;
 /// Reads Claude Desktop Code-tab session transcripts from
 /// %USERPROFILE%\.claude\projects\&lt;project&gt;\&lt;session-guid&gt;.jsonl - the same
 /// files Claude Code CLI writes (Desktop's Code tab writes them too, with
-/// entrypoint: "claude-desktop").
+/// entrypoint: "claude-desktop"). With CLAUDE_CONFIG_DIR set, Claude Code
+/// writes them under that folder instead, and so this reads there (AppPaths).
 ///
 /// Counting rules, each one found by comparing against Claude Code's own
 /// /usage on real transcripts:
@@ -33,48 +35,74 @@ namespace StickyAIusage.Services;
 /// Parsing is incremental: each file's parse state is cached, and a later call
 /// only reads bytes appended since the previous one. The widget polls every 15
 /// seconds, and re-parsing every multi-MB transcript on each tick was a
-/// measurable cost.
+/// measurable cost. The cache keeps the 512 most recently read transcripts.
+///
+/// Which files exist, and when each was last written, comes from the
+/// <see cref="TranscriptIndex"/>: no question here walks the folder.
 /// </summary>
-public static class ClaudeSessionLogReader
+public sealed class ClaudeSessionLogReader
 {
-    public static string DefaultProjectsRoot => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".claude", "projects");
+    public static string DefaultProjectsRoot => Path.Combine(AppPaths.ClaudeDirectory, "projects");
 
-    private static readonly object CacheLock = new();
-    private static readonly Dictionary<string, TranscriptState> Cache = new(StringComparer.OrdinalIgnoreCase);
-    private const int MaxCachedTranscripts = 256;
+    /// <summary>Parse states kept (least recently read dropped first): far more than
+    /// the 30-day view lists, small enough to stay a few MB.</summary>
+    internal const int MaxCachedTranscripts = 512;
+
+    private readonly TranscriptIndex _index;
+    private readonly object _cacheLock = new();
+    private readonly Dictionary<string, LinkedListNode<TranscriptState>> _cache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly LinkedList<TranscriptState> _recentlyRead = new(); // most recent first
+
+    public ClaudeSessionLogReader(TranscriptIndex index)
+    {
+        _index = index;
+    }
+
+    /// <summary>The projects folder the index covers.</summary>
+    public string ProjectsRoot => _index.Root;
+
+    /// <summary>How many parse states are cached (tests).</summary>
+    internal int CachedCount
+    {
+        get
+        {
+            lock (_cacheLock)
+                return _cache.Count;
+        }
+    }
+
+    internal bool IsCached(string path)
+    {
+        lock (_cacheLock)
+            return _cache.ContainsKey(path);
+    }
 
     /// <summary>Returns one SessionInfo per session transcript with activity on
     /// the given local date ("sessions active today"), most recently
     /// active first. Never throws; unreadable files are skipped.</summary>
-    public static List<SessionInfo> GetSessionsForDate(DateOnly localDate, string? projectsRoot = null,
-        bool onlyWithWork = true) =>
-        GetSessionsInRange(localDate, localDate, projectsRoot, onlyWithWork);
+    public List<SessionInfo> GetSessionsForDate(DateOnly localDate, bool onlyWithWork = true) =>
+        GetSessionsInRange(localDate, localDate, onlyWithWork);
 
     /// <summary>Like GetSessionsForDate, for sessions last active on any local
     /// date from <paramref name="from"/> to <paramref name="to"/> inclusive -
     /// the flyout's "Last 7 days" and similar views.</summary>
-    public static List<SessionInfo> GetSessionsInRange(DateOnly from, DateOnly to, string? projectsRoot = null,
-        bool onlyWithWork = true)
+    public List<SessionInfo> GetSessionsInRange(DateOnly from, DateOnly to, bool onlyWithWork = true)
     {
         var results = new List<SessionInfo>();
-        foreach (var file in EnumerateSessionFiles(projectsRoot ?? DefaultProjectsRoot))
+        // Cheap pre-filter on the write time the index keeps, before touching any file.
+        foreach (var file in _index.WrittenBetween(LocalMidnightUtc(from), LocalMidnightUtc(to.AddDays(1))))
         {
-            // Cheap pre-filter on the OS timestamp before touching the content.
-            DateTime lastWrite;
-            try { lastWrite = File.GetLastWriteTime(file); }
-            catch { continue; }
-
-            var writeDate = DateOnly.FromDateTime(lastWrite);
-            if (writeDate < from || writeDate > to)
+            if (!IsSessionTranscript(file.Path))
                 continue;
-
-            if (ReadSession(file) is { } session && (!onlyWithWork || HasWorkIn(session, from, to)))
+            if (ReadSession(file.Path) is { } session && (!onlyWithWork || HasWorkIn(session, from, to)))
                 results.Add(session);
         }
 
         return results.OrderByDescending(s => s.LastActivityAt).ToList();
     }
+
+    private static DateTime LocalMidnightUtc(DateOnly date) =>
+        date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Local).ToUniversalTime();
 
     /// <summary>
     /// Whether a session actually did something in that date range, and so is
@@ -93,57 +121,21 @@ public static class ClaudeSessionLogReader
     /// <summary>Returns the session the collapsed strip shows: the top of
     /// today's list (so the strip and the expanded panel can never disagree),
     /// or the newest session file from any date if nothing ran today.</summary>
-    public static SessionInfo? GetMostRecentSession(string? projectsRoot = null)
+    public SessionInfo? GetMostRecentSession()
     {
-        var root = projectsRoot ?? DefaultProjectsRoot;
-        var today = GetSessionsForDate(DateOnly.FromDateTime(DateTime.Now), root);
+        var today = GetSessionsForDate(DateOnly.FromDateTime(DateTime.Now));
         if (today.Count > 0)
             return today[0];
 
-        try
-        {
-            var newestFile = EnumerateSessionFiles(root)
-                .OrderByDescending(File.GetLastWriteTime)
-                .FirstOrDefault();
-            return newestFile is null ? null : ReadSession(newestFile);
-        }
-        catch
-        {
-            return null;
-        }
+        return _index.Newest(IsSessionTranscript) is { } newest ? ReadSession(newest.Path) : null;
     }
 
-    /// <summary>Returns the most recent OS last-write time across every
+    /// <summary>Returns the most recent last-write time across every
     /// transcript file, or null if there are none. Deliberately includes
-    /// subagent transcripts - a running subagent means Claude Code is active -
-    /// and deliberately cheap (a directory scan and a stat per file), since
-    /// ClaudeUsageProvider calls it on every poll tick to choose between its
-    /// active and idle polling intervals.</summary>
-    public static DateTime? GetMostRecentActivityUtc(string? projectsRoot = null)
-    {
-        var root = projectsRoot ?? DefaultProjectsRoot;
-        if (!Directory.Exists(root))
-            return null;
-
-        try
-        {
-            DateTime? maxTime = null;
-            foreach (var file in Directory.EnumerateFiles(root, "*.jsonl", SearchOption.AllDirectories))
-            {
-                DateTime t;
-                try { t = File.GetLastWriteTimeUtc(file); }
-                catch { continue; }
-
-                if (maxTime is null || t > maxTime)
-                    maxTime = t;
-            }
-            return maxTime;
-        }
-        catch
-        {
-            return null;
-        }
-    }
+    /// subagent transcripts - a running subagent means Claude Code is active.
+    /// The usage sources call it on every poll tick to choose between their
+    /// active and idle polling intervals; the index keeps it, so it costs nothing.</summary>
+    public DateTime? GetMostRecentActivityUtc() => _index.MostRecentWriteUtc;
 
     /// <summary>A main session transcript is named after its session's GUID;
     /// anything else (notably subagents/agent-&lt;id&gt;.jsonl) is not a session.</summary>
@@ -152,50 +144,51 @@ public static class ClaudeSessionLogReader
         !path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
             .Contains("subagents", StringComparer.OrdinalIgnoreCase);
 
-    private static IEnumerable<string> EnumerateSessionFiles(string root)
-    {
-        if (!Directory.Exists(root))
-            return Array.Empty<string>();
-
-        try
-        {
-            // Materialized so an enumeration failure midway surfaces here,
-            // inside the try, rather than later in the caller's loop.
-            return Directory.EnumerateFiles(root, "*.jsonl", SearchOption.AllDirectories)
-                .Where(IsSessionTranscript)
-                .ToList();
-        }
-        catch
-        {
-            return Array.Empty<string>();
-        }
-    }
-
     /// <summary>Parses (or incrementally updates) one transcript and returns a
     /// fresh SessionInfo snapshot, or null if the file isn't a readable session
     /// transcript. Each call returns a new object, so callers may mutate it
     /// (e.g. attach Git info) without affecting the cached parse state.</summary>
-    internal static SessionInfo? ReadSession(string path)
+    internal SessionInfo? ReadSession(string path)
     {
         try
         {
             var file = new FileInfo(path);
             if (!file.Exists)
                 return null;
+            // What the file says now beats a watcher event that never came.
+            _index.Observe(new TranscriptFile(path, file.Length, file.LastWriteTimeUtc));
 
             TranscriptState state;
-            lock (CacheLock)
+            lock (_cacheLock)
             {
                 // Shorter than what's already consumed, or a different file at
                 // the same path: start over rather than parse from a bogus offset.
-                if (!Cache.TryGetValue(path, out state!) ||
-                    file.Length < state.Offset ||
-                    file.CreationTimeUtc != state.CreationTimeUtc)
+                // A new price list (the daily refresh) also starts over, so the
+                // costs already summed are priced again with it.
+                var catalog = ModelCatalog.Current;
+                if (_cache.TryGetValue(path, out var node) &&
+                    file.Length >= node.Value.Offset &&
+                    file.CreationTimeUtc == node.Value.CreationTimeUtc &&
+                    node.Value.Catalog == catalog)
                 {
-                    if (Cache.Count >= MaxCachedTranscripts)
-                        Cache.Clear();
-                    state = new TranscriptState(path, file.CreationTimeUtc);
-                    Cache[path] = state;
+                    state = node.Value;
+                    _recentlyRead.Remove(node);
+                    _recentlyRead.AddFirst(node);
+                }
+                else
+                {
+                    if (node is not null)
+                    {
+                        _recentlyRead.Remove(node);
+                        _cache.Remove(path);
+                    }
+                    else if (_cache.Count >= MaxCachedTranscripts && _recentlyRead.Last is { } oldest)
+                    {
+                        _recentlyRead.RemoveLast();
+                        _cache.Remove(oldest.Value.FilePath);
+                    }
+                    state = new TranscriptState(path, file.CreationTimeUtc, catalog);
+                    _cache[path] = _recentlyRead.AddFirst(state);
                 }
             }
 
@@ -213,18 +206,21 @@ public static class ClaudeSessionLogReader
 
     /// <summary>Everything parsed from one transcript so far, plus the byte
     /// offset up to which it has been consumed.</summary>
-    private sealed class TranscriptState(string path, DateTime creationTimeUtc)
+    private sealed class TranscriptState(string path, DateTime creationTimeUtc, ModelCatalog catalog)
     {
         private readonly string _canonicalSessionId = Path.GetFileNameWithoutExtension(path);
 
+        public string FilePath { get; } = path;
+
         // Kept in parallel: records belonging to this session only, and every
         // record (the fallback when nothing in the file matches its name).
-        private readonly Totals _own = new();
-        private readonly Totals _all = new();
+        private readonly Totals _own = new(catalog);
+        private readonly Totals _all = new(catalog);
 
         private string? _contentSessionId, _cwd, _version;
 
         public DateTime CreationTimeUtc { get; } = creationTimeUtc;
+        public ModelCatalog Catalog { get; } = catalog;
         public long Offset { get; private set; }
 
         /// <summary>Consumes complete lines between Offset and fileLength. A
@@ -238,7 +234,7 @@ public static class ClaudeSessionLogReader
             byte[] buffer;
             // FileShare.ReadWrite | Delete: Claude Code may hold the file open
             // for writing; File.ReadLines' FileShare.Read would fail on that.
-            using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read,
+            using (var stream = new FileStream(FilePath, FileMode.Open, FileAccess.Read,
                        FileShare.ReadWrite | FileShare.Delete))
             {
                 stream.Seek(Offset, SeekOrigin.Begin);
@@ -312,7 +308,7 @@ public static class ClaudeSessionLogReader
             {
                 SessionId = _canonicalSessionId,
                 SessionName = t.SessionName,
-                TranscriptPath = path,
+                TranscriptPath = FilePath,
                 WorkingDirectory = _cwd,
                 Model = t.Model,
                 ThinkingEffort = t.Effort,
@@ -326,7 +322,8 @@ public static class ClaudeSessionLogReader
                 ContextWindowSize = ModelContextWindows.Lookup(t.Model),
                 CurrentContextTokens = t.LastTurnContextTokens,
                 CompactionCount = t.CompactionCount,
-                SkillsUsed = t.Skills.ToList()
+                SkillsUsed = t.Skills.ToList(),
+                CostIsRough = t.CostIsRough
             };
             session.EstimatedCostUsd = Math.Round(t.CostUsd, 4);
             return session;
@@ -334,7 +331,7 @@ public static class ClaudeSessionLogReader
     }
 
     /// <summary>Running totals for one view of a transcript (see TranscriptState).</summary>
-    private sealed class Totals
+    private sealed class Totals(ModelCatalog catalog)
     {
         private readonly HashSet<string> _seenMessageIds = new();
 
@@ -354,6 +351,9 @@ public static class ClaudeSessionLogReader
         /// <summary>Estimated cost, summed per response at that response's
         /// own model, cache-write lifetime (5m/1h), speed and region.</summary>
         public decimal CostUsd { get; private set; }
+
+        /// <summary>A response used a model the price list doesn't know.</summary>
+        public bool CostIsRough { get; private set; }
         public List<string> Skills { get; } = new();
 
         private static string? ReadEffort(JsonElement root, string property)
@@ -405,43 +405,69 @@ public static class ClaudeSessionLogReader
             if (GetString(message, "model") is { } model && model != "<synthetic>")
                 Model = model;
 
-            if (!message.TryGetProperty("usage", out var usage) || usage.ValueKind != JsonValueKind.Object)
+            if (CountResponse(message, _seenMessageIds, Model, catalog) is not { } response)
                 return;
 
-            // A record with no id (unexpected shape) is treated as always-new
-            // rather than silently dropped.
-            var messageId = GetString(message, "id");
-            if (messageId is not null && !_seenMessageIds.Add(messageId))
-                return;
-
-            var inTok = GetLong(usage, "input_tokens");
-            var cacheReadTok = GetLong(usage, "cache_read_input_tokens");
-            var cacheCreationTok = GetLong(usage, "cache_creation_input_tokens");
-
-            var outTok = GetLong(usage, "output_tokens");
-
-            // Cache writes kept 1 hour cost more than 5-minute ones; Claude
-            // Code reports the split under cache_creation. Without it, all
-            // writes are priced as 5-minute ones.
-            long write1h = 0;
-            if (usage.TryGetProperty("cache_creation", out var creation) && creation.ValueKind == JsonValueKind.Object)
-                write1h = Math.Min(GetLong(creation, "ephemeral_1h_input_tokens"), cacheCreationTok);
-
-            CostUsd += PriceTable.CostOf(GetString(message, "model") ?? Model, inTok, outTok, cacheReadTok,
-                cacheCreationTok - write1h, write1h,
-                fast: GetString(usage, "speed") == "fast",
-                usOnly: GetString(usage, "inference_geo") == "us");
-
-            InputTokens += inTok;
-            OutputTokens += outTok;
-            CacheReadTokens += cacheReadTok;
-            CacheCreationTokens += cacheCreationTok;
-            LastTurnContextTokens = inTok + cacheReadTok + cacheCreationTok;
+            CostUsd += response.CostUsd;
+            CostIsRough |= response.CostIsRough;
+            InputTokens += response.InputTokens;
+            OutputTokens += response.OutputTokens;
+            CacheReadTokens += response.CacheReadTokens;
+            CacheCreationTokens += response.CacheCreationTokens;
+            LastTurnContextTokens = response.InputTokens + response.CacheReadTokens + response.CacheCreationTokens;
 
             foreach (var skill in ExtractSkillInvocations(message))
                 if (!Skills.Contains(skill))
                     Skills.Add(skill);
         }
+    }
+
+    /// <summary>
+    /// One API response's tokens and estimated cost, or null when the record adds
+    /// nothing: no usage block, or a message id already counted (Claude Code
+    /// repeats a response's usage on every content block it writes). The session
+    /// cards and the year's stats both count through here, so their rules can't
+    /// drift apart. The caller has already skipped sidechain (subagent) records.
+    /// </summary>
+    /// <param name="message">The record's <c>message</c> object.</param>
+    /// <param name="seenMessageIds">The ids counted so far in this view of the transcript.</param>
+    /// <param name="fallbackModel">The model to price a response with that names none.</param>
+    internal static CountedResponse? CountResponse(JsonElement message, HashSet<string> seenMessageIds, string? fallbackModel,
+        ModelCatalog catalog)
+    {
+        if (!message.TryGetProperty("usage", out var usage) || usage.ValueKind != JsonValueKind.Object)
+            return null;
+
+        // A record with no id (unexpected shape) is treated as always-new
+        // rather than silently dropped.
+        var messageId = GetString(message, "id");
+        if (messageId is not null && !seenMessageIds.Add(messageId))
+            return null;
+
+        var inTok = GetLong(usage, "input_tokens");
+        var cacheReadTok = GetLong(usage, "cache_read_input_tokens");
+        var cacheCreationTok = GetLong(usage, "cache_creation_input_tokens");
+        var outTok = GetLong(usage, "output_tokens");
+        var model = GetString(message, "model") is { } m && m != "<synthetic>" ? m : fallbackModel;
+
+        // A response with no tokens costs nothing whatever its model, and
+        // must not mark the session's cost rough ("<synthetic>" messages).
+        if (inTok + outTok + cacheReadTok + cacheCreationTok == 0)
+            return new CountedResponse(model, 0, 0, 0, 0, 0m, false);
+
+        // Cache writes kept 1 hour cost more than 5-minute ones; Claude
+        // Code reports the split under cache_creation. Without it, all
+        // writes are priced as 5-minute ones.
+        long write1h = 0;
+        if (usage.TryGetProperty("cache_creation", out var creation) && creation.ValueKind == JsonValueKind.Object)
+            write1h = Math.Min(GetLong(creation, "ephemeral_1h_input_tokens"), cacheCreationTok);
+
+        var estimate = PriceTable.Estimate(model, inTok, outTok, cacheReadTok,
+            cacheCreationTok - write1h, write1h,
+            fast: GetString(usage, "speed") == "fast",
+            usOnly: GetString(usage, "inference_geo") == "us",
+            catalog: catalog);
+        return new CountedResponse(model, inTok, outTok, cacheReadTok, cacheCreationTok, estimate.Usd, estimate.IsRough);
     }
 
     private static IEnumerable<string> ExtractSkillInvocations(JsonElement message)
@@ -460,7 +486,7 @@ public static class ClaudeSessionLogReader
         }
     }
 
-    private static string? GetString(JsonElement el, string property) =>
+    internal static string? GetString(JsonElement el, string property) =>
         el.ValueKind == JsonValueKind.Object && el.TryGetProperty(property, out var v) &&
         v.ValueKind == JsonValueKind.String
             ? v.GetString()
@@ -471,11 +497,11 @@ public static class ClaudeSessionLogReader
             ? v.GetInt64()
             : 0;
 
-    private static bool GetBool(JsonElement el, string property) =>
+    internal static bool GetBool(JsonElement el, string property) =>
         el.ValueKind == JsonValueKind.Object && el.TryGetProperty(property, out var v) &&
         v.ValueKind == JsonValueKind.True;
 
-    private static DateTimeOffset? GetTimestamp(JsonElement el)
+    internal static DateTimeOffset? GetTimestamp(JsonElement el)
     {
         var raw = GetString(el, "timestamp");
         return raw is not null && DateTimeOffset.TryParse(raw, out var dt) ? dt : null;

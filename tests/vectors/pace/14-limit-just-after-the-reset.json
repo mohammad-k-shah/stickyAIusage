@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "name": "limit just after the reset",
+  "note": "60/h, 20 left = 20 min, but the reset comes in 15: never a limit time after the reset. Projection 80 + 15 = 95.",
+  "kind": "five_hour",
+  "now": "2026-11-17T14:00:00Z",
+  "resetsInMinutes": 15,
+  "lengthMinutes": 300,
+  "wholePointsOnly": false,
+  "samples": [
+    {
+      "minutes": -30,
+      "percent": 50
+    },
+    {
+      "minutes": -25,
+      "percent": 55
+    },
+    {
+      "minutes": -20,
+      "percent": 60
+    },
+    {
+      "minutes": -15,
+      "percent": 65
+    },
+    {
+      "minutes": -10,
+      "percent": 70
+    },
+    {
+      "minutes": -5,
+      "percent": 75
+    },
+    {
+      "minutes": 0,
+      "percent": 80
+    }
+  ],
+  "tolerance": {
+    "hitsLimitMinutes": 2,
+    "percent": 1,
+    "ratePerHourRelative": 0.02
+  },
+  "expected": {
+    "percentNow": 80,
+    "rateKnown": true,
+    "ratePerHour": 60,
+    "hitsLimitInMinutes": null,
+    "projectedAtReset": 95,
+    "aheadOfEvenPace": -15,
+    "confidence": "high"
+  }
+}

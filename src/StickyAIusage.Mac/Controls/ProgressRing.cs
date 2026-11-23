@@ -20,8 +20,21 @@ public sealed class ProgressRing : Control
     public static readonly StyledProperty<IBrush?> TrackBrushProperty =
         AvaloniaProperty.Register<ProgressRing, IBrush?>(nameof(TrackBrush), Brushes.DimGray);
 
-    static ProgressRing() =>
-        AffectsRender<ProgressRing>(ValueProperty, ThicknessProperty, StrokeProperty, TrackBrushProperty);
+    /// <summary>The value drawn: follows <see cref="Value"/> over 300 ms
+    /// (<see cref="Motion"/>), or at once when animations are off.</summary>
+    private static readonly StyledProperty<double> ShownValueProperty =
+        AvaloniaProperty.Register<ProgressRing, double>("ShownValue");
+
+    static ProgressRing()
+    {
+        AffectsRender<ProgressRing>(ShownValueProperty, ThicknessProperty, StrokeProperty, TrackBrushProperty);
+        ValueProperty.Changed.AddClassHandler<ProgressRing>((ring, e) =>
+        {
+            // Set once: replacing them would cut a running ease short.
+            ring.Transitions ??= Motion.For(ShownValueProperty);
+            ring.SetValue(ShownValueProperty, e.GetNewValue<double>());
+        });
+    }
 
     public double Value { get => GetValue(ValueProperty); set => SetValue(ValueProperty, value); }
     public double Thickness { get => GetValue(ThicknessProperty); set => SetValue(ThicknessProperty, value); }
@@ -38,7 +51,7 @@ public sealed class ProgressRing : Control
         var center = new Point(size.Width / 2, size.Height / 2);
         context.DrawEllipse(null, new Pen(TrackBrush, Thickness), center, radius, radius);
 
-        var value = Math.Clamp(Value, 0, 100);
+        var value = Math.Clamp(GetValue(ShownValueProperty), 0, 100);
         if (value <= 0)
             return;
 

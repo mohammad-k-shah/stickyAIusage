@@ -7,7 +7,8 @@ name: Release
 #
 #   git tag v0.3.0 && git push origin v0.3.0
 #
-# or run this workflow by hand and give it the tag to release.
+# or run this workflow by hand and give it the tag to release. A tag with a
+# hyphen (v2.0.0-beta.1, v2.0.0-rc.1) is published as a pre-release.
 
 on:
   push:
@@ -24,6 +25,9 @@ permissions:
 jobs:
   windows:
     runs-on: windows-latest
+    permissions:
+      contents: read
+      actions: read   # SignPath reads the unsigned artifact (only when signing is set up)
     steps:
       - uses: actions/checkout@v4
         with:
@@ -31,13 +35,23 @@ jobs:
 
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '10.0.x'
 
+      # All three test projects (the macOS screens render headless here too).
       - name: Test
-        run: dotnet test tests/StickyAIusage.Tests/StickyAIusage.Tests.csproj -c Release
+        run: |
+          dotnet test tests/StickyAIusage.Tests/StickyAIusage.Tests.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'Unit tests failed' }
+          dotnet test tests/StickyAIusage.UiTests/StickyAIusage.UiTests.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'Windows UI tests failed' }
+          dotnet test tests/StickyAIusage.Mac.UiTests/StickyAIusage.Mac.UiTests.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'macOS UI tests failed' }
 
-      # Self-contained, so a release download needs no .NET install. The tag
-      # (minus its "v") becomes the exe's version, shown in its Properties.
+      # Two builds of the same exe. The tag (minus its "v") becomes the exe's
+      # version, shown in its Properties. Symbols are embedded, so crash
+      # reports keep their line numbers and the zips hold the exe alone.
+      #   publish        self-contained: needs no .NET install (install.ps1, Scoop)
+      #   publish-small  framework-dependent: under 1 MB, needs the .NET 10 Desktop Runtime
       - name: Publish
         env:
           TAG: ${{ github.event.inputs.tag || github.ref_name }}
@@ -46,15 +60,133 @@ jobs:
           dotnet publish src/StickyAIusage/StickyAIusage.csproj `
             -c Release -r win-x64 --self-contained true `
             -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true `
-            "-p:Version=$version" -o publish
+            -p:DebugType=embedded "-p:Version=$version" -o publish
+          dotnet publish src/StickyAIusage/StickyAIusage.csproj `
+            -c Release -r win-x64 --self-contained false `
+            -p:PublishSingleFile=true `
+            -p:DebugType=embedded "-p:Version=$version" -o publish-small
+
+      # Code signing through SignPath's open-source program (docs/CONTRIBUTING.md,
+      # Releasing). Inert until the maintainer sets the repository variable
+      # SIGNPATH_ORGANIZATION_ID (and SIGNPATH_PROJECT_SLUG, SIGNPATH_POLICY_SLUG) and the
+      # secret SIGNPATH_API_TOKEN: without them every step below is skipped and the exes
+      # stay unsigned, as before. Signed here, so the self-test runs the signed files.
+      - name: Upload the unsigned exes for signing
+        id: unsigned-exes
+        if: vars.SIGNPATH_ORGANIZATION_ID != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-exes
+          path: |
+            publish/StickyAIusage.exe
+            publish-small/StickyAIusage.exe
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Sign the exes (SignPath)
+        if: vars.SIGNPATH_ORGANIZATION_ID != ''
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG }}
+          github-artifact-id: ${{ steps.unsigned-exes.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: signed-exes
+
+      - name: Use the signed exes
+        if: vars.SIGNPATH_ORGANIZATION_ID != ''
+        run: |
+          foreach ($folder in 'publish', 'publish-small') {
+            Copy-Item "signed-exes\$folder\StickyAIusage.exe" "$folder\StickyAIusage.exe" -Force
+            $signature = Get-AuthenticodeSignature "$folder\StickyAIusage.exe"
+            if ($signature.Status -ne 'Valid') { throw "The $folder exe isn't validly signed: $($signature.Status) $($signature.StatusMessage)" }
+            Write-Host "$folder signed by $($signature.SignerCertificate.Subject)"
+          }
+
+      # install.ps1 and the Scoop manifest expect StickyAIusage.exe alone at
+      # the top of the zip.
+      - name: Check what the zips will hold
+        run: |
+          foreach ($folder in 'publish', 'publish-small') {
+            $files = @(Get-ChildItem $folder -Recurse -File | ForEach-Object Name)
+            if (($files -join ',') -ne 'StickyAIusage.exe') { throw "$folder holds $($files -join ', ') instead of StickyAIusage.exe alone" }
+          }
+
+      # The exact files that get zipped start in a temporary profile, load the
+      # tray icon and build every screen off-screen; any failing check stops
+      # the release here (docs/CONTRIBUTING.md, Releasing).
+      - name: Self-test both exes
+        timeout-minutes: 5
+        run: |
+          foreach ($folder in 'publish', 'publish-small') {
+            & "$folder\StickyAIusage.exe" --self-test "self-test-$folder.txt" | Out-Host
+            if ($LASTEXITCODE -ne 0) { throw "The $folder exe failed its self-test (exit code $LASTEXITCODE)" }
+          }
+
+      - name: Upload the self-test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: self-test-windows
+          path: self-test-*.txt
+          if-no-files-found: warn
 
       - name: Zip
-        run: Compress-Archive -Path publish/* -DestinationPath StickyAIusage-win-x64.zip
+        run: |
+          Compress-Archive -Path publish/* -DestinationPath StickyAIusage-win-x64.zip
+          Compress-Archive -Path publish-small/* -DestinationPath StickyAIusage-win-x64-small.zip
+
+      # The per-user installer winget uses (installer/windows/setup.iss), from
+      # the same self-contained exe. windows-latest ships Inno Setup 6.
+      - name: Installer
+        env:
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          $version = $env:TAG.TrimStart('v')
+          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress }
+          & $iscc "/DAppVersion=$version" "/DSourceDir=$PWD\publish" "/O$PWD" installer\windows\setup.iss
+          if ($LASTEXITCODE -ne 0) { throw "The installer didn't build (iscc exit code $LASTEXITCODE)" }
+
+      # The Setup (which holds the signed exe) is signed the same way, when signing is set up.
+      - name: Upload the unsigned Setup for signing
+        id: unsigned-setup
+        if: vars.SIGNPATH_ORGANIZATION_ID != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-setup
+          path: StickyAIusage-Setup-x64.exe
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Sign the Setup (SignPath)
+        if: vars.SIGNPATH_ORGANIZATION_ID != ''
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG }}
+          github-artifact-id: ${{ steps.unsigned-setup.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: signed-setup
+
+      - name: Use the signed Setup
+        if: vars.SIGNPATH_ORGANIZATION_ID != ''
+        run: |
+          Copy-Item signed-setup\StickyAIusage-Setup-x64.exe StickyAIusage-Setup-x64.exe -Force
+          $signature = Get-AuthenticodeSignature StickyAIusage-Setup-x64.exe
+          if ($signature.Status -ne 'Valid') { throw "The Setup isn't validly signed: $($signature.Status) $($signature.StatusMessage)" }
 
       - uses: actions/upload-artifact@v4
         with:
           name: release-win-x64
-          path: StickyAIusage-win-x64.zip
+          path: |
+            StickyAIusage-win-x64.zip
+            StickyAIusage-win-x64-small.zip
+            StickyAIusage-Setup-x64.exe
           if-no-files-found: error
 
   macos:
@@ -66,18 +198,99 @@ jobs:
 
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '10.0.x'
 
       - name: Test
-        run: dotnet test tests/StickyAIusage.Tests/StickyAIusage.Tests.csproj -c Release
+        run: |
+          # Hosted macOS runners sometimes deliver a file-watcher (FSEvents) event late: three watcher
+          # tests once timed out in a run between two that passed. One more try, said in the log.
+          dotnet test tests/StickyAIusage.Tests/StickyAIusage.Tests.csproj -c Release || {
+            echo "::warning::The unit tests failed once on macOS; running them again."
+            dotnet test tests/StickyAIusage.Tests/StickyAIusage.Tests.csproj -c Release
+          }
+          dotnet test tests/StickyAIusage.Mac.UiTests/StickyAIusage.Mac.UiTests.csproj -c Release
+
+      # Developer ID signing and notarization (scripts/build-mac-app.sh). Inert until the
+      # maintainer adds the secrets MAC_CERTIFICATE_P12 (the "Developer ID Application"
+      # certificate and key, base64), MAC_CERTIFICATE_PASSWORD, and for notarization
+      # MAC_NOTARY_KEY (an App Store Connect API key's .p8, base64), MAC_NOTARY_KEY_ID and
+      # MAC_NOTARY_ISSUER: without them this step does nothing and the apps are ad-hoc
+      # signed, as before.
+      - name: Import the Developer ID certificate
+        id: signing
+        env:
+          MAC_CERTIFICATE_P12: ${{ secrets.MAC_CERTIFICATE_P12 }}
+          MAC_CERTIFICATE_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+          MAC_NOTARY_KEY: ${{ secrets.MAC_NOTARY_KEY }}
+        run: |
+          if [ -z "$MAC_CERTIFICATE_P12" ]; then
+            echo "No Developer ID certificate in the secrets: the apps are ad-hoc signed."
+            exit 0
+          fi
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          password="$(uuidgen)"
+          security create-keychain -p "$password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$password" "$keychain"
+          printf '%s' "$MAC_CERTIFICATE_P12" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          security import "$RUNNER_TEMP/certificate.p12" -k "$keychain" -P "$MAC_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          rm -f "$RUNNER_TEMP/certificate.p12"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$password" "$keychain" > /dev/null
+          security list-keychains -d user -s "$keychain" login.keychain-db
+          identity="$(security find-identity -v -p codesigning "$keychain" | grep -o '"Developer ID Application: [^"]*"' | head -1 | tr -d '"')"
+          if [ -z "$identity" ]; then echo "The certificate holds no Developer ID Application identity."; exit 1; fi
+          echo "identity=$identity" >> "$GITHUB_OUTPUT"
+          if [ -n "$MAC_NOTARY_KEY" ]; then
+            printf '%s' "$MAC_NOTARY_KEY" | base64 --decode > "$RUNNER_TEMP/notary-key.p8"
+            echo "notary-key=$RUNNER_TEMP/notary-key.p8" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Build both architectures
         env:
           VERSION: ${{ github.event.inputs.tag || github.ref_name }}
+          MAC_SIGN_IDENTITY: ${{ steps.signing.outputs.identity }}
+          MAC_NOTARY_KEY_PATH: ${{ steps.signing.outputs.notary-key }}
+          MAC_NOTARY_KEY_ID: ${{ secrets.MAC_NOTARY_KEY_ID }}
+          MAC_NOTARY_ISSUER: ${{ secrets.MAC_NOTARY_ISSUER }}
         run: |
           VERSION="${VERSION#v}"
           VERSION="$VERSION" scripts/build-mac-app.sh osx-arm64
           VERSION="$VERSION" scripts/build-mac-app.sh osx-x64
+
+      - name: Remove the signing keychain and key
+        if: always()
+        run: |
+          rm -f "$RUNNER_TEMP/notary-key.p8"
+          if [ -f "$RUNNER_TEMP/signing.keychain-db" ]; then security delete-keychain "$RUNNER_TEMP/signing.keychain-db"; fi
+
+      # Unpacks the zips that get published and runs the app inside each. The
+      # runner is Apple Silicon: the Intel build runs under Rosetta, installed
+      # first when the runner image doesn't have it.
+      - name: Self-test both apps
+        timeout-minutes: 8
+        run: |
+          if ! arch -x86_64 /usr/bin/true 2>/dev/null; then
+            sudo softwareupdate --install-rosetta --agree-to-license
+          fi
+          for arch in arm64 x64; do
+            dir="self-test-$arch"
+            rm -rf "$dir" && mkdir "$dir"
+            ditto -x -k "artifacts/mac/StickyAIusage-osx-$arch.zip" "$dir"
+            app="$dir/Sticky AI Usage.app/Contents/MacOS/StickyAIusage"
+            if [ "$arch" = x64 ]; then
+              arch -x86_64 "$app" --self-test "self-test-mac-$arch.txt"
+            else
+              "$app" --self-test "self-test-mac-$arch.txt"
+            fi
+          done
+
+      - name: Upload the self-test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: self-test-mac
+          path: self-test-mac-*.txt
+          if-no-files-found: warn
 
       - uses: actions/upload-artifact@v4
         with:
@@ -88,33 +301,129 @@ jobs:
   publish:
     needs: [windows, macos]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write          # the release
+      id-token: write          # build provenance: the Sigstore signing certificate
+      attestations: write      # build provenance: storing the attestation
+      artifact-metadata: write # build provenance: the artifact's storage record
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
 
       - uses: actions/download-artifact@v4
         with:
           path: downloads
+          pattern: release-*
           merge-multiple: true
+
+      - name: Name the Mac zips and write checksums.txt
+        run: |
+          mv downloads/StickyAIusage-osx-arm64.zip downloads/StickyAIusage-mac-apple-silicon.zip
+          mv downloads/StickyAIusage-osx-x64.zip downloads/StickyAIusage-mac-intel.zip
+          # sha256sum's own format, so "sha256sum -c" and "shasum -a 256 -c"
+          # check it, and the install scripts refuse a download that differs.
+          (cd downloads && sha256sum *.zip *.exe > checksums.txt && cat checksums.txt)
+
+      # A signed statement that these files were built by this workflow from
+      # this commit, checked with `gh attestation verify <file> --repo <repo>`.
+      # Free for public repositories only (a private one needs GitHub
+      # Enterprise Cloud), so a private copy skips it.
+      - name: Build provenance
+        if: github.event.repository.visibility == 'public'
+        uses: actions/attest@v4
+        with:
+          subject-checksums: downloads/checksums.txt
+
+      # The Scoop and winget manifests filled with this release's version and
+      # hashes, for the maintainer to hand to the package repositories
+      # (packaging/README.md). Nothing is submitted from here.
+      - name: Package-manager manifests
+        shell: pwsh
+        env:
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: packaging/New-PackageManifests.ps1 -Version $env:TAG -ChecksumsFile downloads/checksums.txt -OutDir package-manifests
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package-manifests
+          path: package-manifests/**
+          if-no-files-found: error
 
       - name: Create the release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.inputs.tag || github.ref_name }}
         run: |
-          mv downloads/StickyAIusage-osx-arm64.zip downloads/StickyAIusage-mac-apple-silicon.zip
-          mv downloads/StickyAIusage-osx-x64.zip downloads/StickyAIusage-mac-intel.zip
+          # The release page leads with what's new: the demo picture and the version's highlights
+          # (docs/CHANGELOG.md's "## vX.Y.Z — the highlights" section, when it has one). Then how
+          # to install and check it, a note for updaters, and the auto-generated pull-request list.
+          awk -v head="## ${TAG} — the highlights" '
+            $0 == head { on = 1; next }
+            on && (/^## / || /^---/) { exit }
+            on { print }
+          ' docs/CHANGELOG.md > highlights.md
+          {
+            if grep -q '[^[:space:]]' highlights.md; then
+              echo '![Sticky AI Usage: the limit time at this pace, which session needs you, Codex beside Claude, share cards and your year](https://raw.githubusercontent.com/@REPO@/@TAG@/docs/images/demo.gif)'
+              echo
+              echo "## What's new"
+              cat highlights.md
+              echo
+            fi
+            cat <<'NOTICE'
+          **Install it** (each script checks the download against `checksums.txt`):
 
-          # A short notice ahead of the auto-generated pull-request list, so it's
-          # visible on the Releases page itself, not only in the README.
-          cat > notes.md <<'NOTICE'
+          - Windows (PowerShell): `& ([scriptblock]::Create((irm https://raw.githubusercontent.com/mohammad-k-shah/stickyAIusage/@TAG@/scripts/install.ps1))) -Version @TAG@`
+          - macOS (Terminal): `curl -fsSL https://raw.githubusercontent.com/mohammad-k-shah/stickyAIusage/@TAG@/scripts/install.sh | sh -s -- --version @TAG@`
+          - The Claude Code plugin, inside Claude Code: `/plugin install sticky-usage --marketplace mohammad-k-shah/stickyAIusage`
+          - `StickyAIusage-Setup-x64.exe` installs it for you only (no admin rights), with an entry in Settings > Apps.
+          - `StickyAIusage-win-x64-small.zip` is the same Windows app at well under 1 MB, for computers that already have
+            the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0).
+
+          **Verify a download by hand:** `Get-FileHash <file>` (Windows) or `shasum -a 256 <file>` (macOS) must print the
+          value `checksums.txt` lists for it. The app in every download passed its start-up self-test before it was
+          published, and every file carries a signed build provenance: `gh attestation verify <file> --repo @REPO@` shows the workflow run and commit it was
+          built from.
+
           > [!NOTE]
-          > Uses your Claude sign-in to show live usage, in ways Anthropic hasn't officially
-          > reviewed. See [Before you install](https://github.com/mohammad-k-shah/stickyAIusage#-before-you-install)
-          > before you install it.
+          > Updating from 1.x? Your copy keeps the **Automatic** usage source, which also reads your Claude sign-in and
+          > asks Anthropic's usage service (not documented for other apps). Choose **Plugin** in Settings → Usage source
+          > to get your limits from Claude Code alone: [how it gets its numbers](https://github.com/mohammad-k-shah/stickyAIusage#-how-it-gets-its-numbers).
+
+          ⭐ If it saves you a blocked session, [star the repository](https://github.com/@REPO@): it decides whether this keeps getting built.
 
           NOTICE
+          } > notes.md
+          sed -i "s/@TAG@/$TAG/g; s|@REPO@|${{ github.repository }}|g" notes.md
           gh api "repos/${{ github.repository }}/releases/generate-notes" -f "tag_name=$TAG" --jq .body >> notes.md
 
-          gh release create "$TAG" downloads/*.zip \
+          prerelease=""
+          case "$TAG" in *-*) prerelease="--prerelease" ;; esac
+          gh release create "$TAG" downloads/*.zip downloads/*.exe downloads/checksums.txt \
             --title "Sticky AI Usage $TAG" \
-            --notes-file notes.md
+            --notes-file notes.md $prerelease
+
+  winget:
+    # Sends the new version to winget once the package exists there (the first
+    # submission is by hand: packaging/README.md). Public repository, stable
+    # tags only, and only after the maintainer sets the repository variable
+    # WINGET_AUTO_SUBMIT to true and the secret WINGET_TOKEN (a classic token
+    # with public_repo).
+    needs: publish
+    if: >-
+      github.event.repository.private == false &&
+      vars.WINGET_AUTO_SUBMIT == 'true' &&
+      !contains(github.event.inputs.tag || github.ref_name, '-')
+    runs-on: windows-latest
+    steps:
+      - name: Submit the new version to winget-pkgs
+        env:
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
+          WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+        run: |
+          $version = $env:TAG.TrimStart('v')
+          Invoke-WebRequest https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
+          .\wingetcreate.exe update MohammadKShah.StickyAIUsage --version $version `
+            --urls "https://github.com/${{ github.repository }}/releases/download/$env:TAG/StickyAIusage-Setup-x64.exe" `
+            --submit --token $env:WINGET_TOKEN

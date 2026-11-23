@@ -31,17 +31,93 @@ public enum ContextLevel { Ok, Warn, High }
 /// Deliberately plain .NET with precomputed strings: the XAML only binds, and
 /// all formatting is unit-tested.
 /// </summary>
-public sealed class SessionCardViewModel
+public sealed class SessionCardViewModel : System.ComponentModel.INotifyPropertyChanged
 {
     /// <summary>A session whose transcript changed this recently is marked "Live".</summary>
     public static readonly TimeSpan LiveWindow = TimeSpan.FromMinutes(2);
 
+    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+
+    /// <summary>The card shows its chip rows, git line and footer. The default
+    /// card is lighter (title, status, cost, model, context bar); the window
+    /// keeps which ones are open across refreshes.</summary>
+    public bool IsExpanded
+    {
+        get => _isExpanded;
+        set
+        {
+            if (_isExpanded == value)
+                return;
+            _isExpanded = value;
+            PropertyChanged?.Invoke(this, new(nameof(IsExpanded)));
+            PropertyChanged?.Invoke(this, new(nameof(ShowDetails)));
+            PropertyChanged?.Invoke(this, new(nameof(DetailsToggleText)));
+        }
+    }
+
+    private bool _isExpanded;
+
+    /// <summary>There is something behind the toggle: chip rows, git or a footer.</summary>
+    public bool HasDetails => Rows.Count > 0 || HasGit || HasFooter;
+
+    public bool ShowDetails => IsExpanded && HasDetails;
+
+    /// <summary>The card can be folded (false for the customizer's preview, which is always open).</summary>
+    public bool CanFold { get; set; } = true;
+
+    /// <summary>The Details / Less toggle shows when there is something to fold.</summary>
+    public bool ShowDetailsToggle => HasDetails && CanFold;
+
+    public string DetailsToggleText => IsExpanded ? "Less ▴" : "Details ▾";
+
+    /// <summary>The plugin describes this session: its status chip replaces the "Live" dot.</summary>
+    public bool HasStatus => StatusText is not null;
+
+    /// <summary>"Needs you: permission", "Working", "Done 3m ago", "Rate limited · resets 4:30 PM".</summary>
+    public string? StatusText { get; init; }
+
+    /// <summary>The chip's color: amber, green, grey, red.</summary>
+    public LightKind StatusKind { get; init; }
+
+    /// <summary>The "Live" dot shows only without a status chip.</summary>
+    public bool ShowLive => IsLive && !HasStatus;
+
+    public bool NeedsYou => StatusKind == LightKind.NeedsYou && HasStatus;
+
+    /// <summary>The model, for the lighter card's subtitle ("Opus 5.5").</summary>
+    public string? ModelText { get; init; }
+
+    /// <summary>The cards that need you first (longest wait first, as the
+    /// activities are ordered), the rest in their order.</summary>
+    public static List<SessionCardViewModel> NeedsYouFirst(List<SessionCardViewModel> cards) =>
+        cards.Where(c => c.NeedsYou).OrderBy(c => c.WaitingSince).Concat(cards.Where(c => !c.NeedsYou)).ToList();
+
+    /// <summary>Since when a card that needs you has waited (sorting only).</summary>
+    public DateTimeOffset WaitingSince { get; init; }
+
     public required string SessionId { get; init; }
+
+    /// <summary>The session this card shows, for its share card.</summary>
+    public SessionInfo? Session { get; init; }
+
+    /// <summary>The card's Share button: not on the customizer's preview.</summary>
+    public bool ShowShare => CanFold && Session is not null;
+
     public required string ShortId { get; init; }
     public required string Title { get; init; }
     public required string Subtitle { get; init; }
     public required decimal CostUsd { get; init; }
     public required string CostText { get; init; }
+
+    /// <summary>"est. cost", or "cost" for Claude Code's own figure.</summary>
+    public required string CostLabel { get; init; }
+
+    /// <summary>Where the figure comes from (estimate, unknown model, Claude Code).</summary>
+    public required string CostToolTip { get; init; }
+
+    /// <summary>The figure is Claude Code's own, not an estimate.</summary>
+    public required bool CostIsExact { get; init; }
+
     public required bool IsLive { get; init; }
 
     /// <summary>The chip rows, in the order the user arranged them
@@ -72,7 +148,8 @@ public sealed class SessionCardViewModel
     /// every card (and losing scroll position) on each poll.</summary>
     public required string Signature { get; init; }
 
-    public static SessionCardViewModel From(SessionInfo s, DateTimeOffset now, CardLayout? layout = null)
+    public static SessionCardViewModel From(SessionInfo s, DateTimeOffset now, CardLayout? layout = null,
+        SessionActivity? activity = null)
     {
         layout ??= CardLayout.Default;
         var shortId = s.SessionId.Length > 8 ? s.SessionId[..8] : s.SessionId;
@@ -83,9 +160,11 @@ public sealed class SessionCardViewModel
         var project = Format.ProjectName(folder);
         var title = string.IsNullOrWhiteSpace(s.SessionName) ? project : s.SessionName!;
 
+        var model = string.IsNullOrEmpty(s.Model) ? null : Format.ModelName(s.Model);
         var subtitle = string.Join(" · ", new[]
         {
             title == project ? null : project,
+            model,
             $"#{shortId}",
             $"ran {Format.Duration(s.Elapsed)}",
             $"last active {Format.Ago(now - s.LastActivityAt)}"
@@ -142,22 +221,34 @@ public sealed class SessionCardViewModel
         var footer = string.Join("  ·  ", footerParts);
 
         var isLive = now - s.LastActivityAt < LiveWindow;
-        var costText = Format.Usd(s.EstimatedCostUsd);
+        var costText = Format.SessionCost(s);
+        var (costLabel, costToolTip) = Format.SessionCostNote(s);
+        var status = activity?.Chip(now);
+        var statusKind = activity is null ? LightKind.Done : SessionLights.Kind(activity.State);
         var signature = string.Join("|", new object?[]
         {
-            title, subtitle, costText, isLive, contextText, g?.Branch, gitState, added, removed, sync, repo, pr, footer,
+            title, subtitle, costText, costLabel, costToolTip, isLive, status, statusKind, contextText, g?.Branch, gitState,
+            added, removed, sync, repo, pr, footer,
             string.Join(";", rows.Select(r => string.Join(",", r.Segments)))
         });
 
         return new SessionCardViewModel
         {
             SessionId = s.SessionId,
+            Session = s,
             ShortId = shortId,
             Title = title,
             Subtitle = subtitle,
-            CostUsd = s.EstimatedCostUsd,
+            CostUsd = s.CostUsd,
             CostText = costText,
+            CostLabel = costLabel,
+            CostToolTip = costToolTip,
+            CostIsExact = s.CostIsExact,
             IsLive = isLive,
+            StatusText = status,
+            StatusKind = statusKind,
+            WaitingSince = activity?.Since ?? now,
+            ModelText = model,
             Rows = rows,
             HasContext = hasContext,
             ContextPercent = Math.Min(100, contextPercent),

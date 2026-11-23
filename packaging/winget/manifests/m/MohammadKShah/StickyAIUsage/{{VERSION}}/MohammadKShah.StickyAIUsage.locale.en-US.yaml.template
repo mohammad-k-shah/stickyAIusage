@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.12.0.schema.json
+
+PackageIdentifier: MohammadKShah.StickyAIUsage
+PackageVersion: {{VERSION}}
+PackageLocale: en-US
+Publisher: Mohammad Karimulla Shah
+PublisherUrl: https://github.com/mohammad-k-shah
+PublisherSupportUrl: https://github.com/mohammad-k-shah/stickyAIusage/issues
+PackageName: Sticky AI Usage
+PackageUrl: https://github.com/mohammad-k-shah/stickyAIusage
+License: MIT
+LicenseUrl: https://github.com/mohammad-k-shah/stickyAIusage/blob/main/LICENSE
+ShortDescription: Your Claude Code limits in the taskbar, when you will hit them at this pace, and which session needs you.
+Description: |-
+  A widget inside the Windows taskbar for Claude Code users: your 5-hour and weekly limits (or a monthly spend cap),
+  when you would hit the limit at this pace, which Claude Code session is waiting for you, Codex's limits beside
+  Claude's, and what today's sessions cost. Out of the box it reads the limits from Claude Code itself through a
+  companion plugin and never touches your Claude sign-in.
+Moniker: sticky-ai-usage
+Tags:
+- claude
+- claude-code
+- anthropic
+- usage
+- widget
+- taskbar
+- codex
+- ai
+- rate-limit
+- cost
+ReleaseNotesUrl: https://github.com/mohammad-k-shah/stickyAIusage/releases/tag/v{{VERSION}}
+ManifestType: defaultLocale
+ManifestVersion: 1.12.0

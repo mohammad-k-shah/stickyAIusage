@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "name": "jump from another device",
+  "note": "1 point per 5 min, then a 20-point jump (usage elsewhere). Slope 0.607/min = 36.4/h, R2 0.57: low. 55 left = 90.6 min from now. Projection 45 + 36.4 x 2 = 117.9. Even 60, so -15.",
+  "kind": "five_hour",
+  "now": "2026-11-17T14:00:00Z",
+  "resetsInMinutes": 120,
+  "lengthMinutes": 300,
+  "wholePointsOnly": false,
+  "samples": [
+    {
+      "minutes": -30,
+      "percent": 20
+    },
+    {
+      "minutes": -25,
+      "percent": 21
+    },
+    {
+      "minutes": -20,
+      "percent": 22
+    },
+    {
+      "minutes": -15,
+      "percent": 23
+    },
+    {
+      "minutes": -10,
+      "percent": 24
+    },
+    {
+      "minutes": -5,
+      "percent": 25
+    },
+    {
+      "minutes": 0,
+      "percent": 45
+    }
+  ],
+  "tolerance": {
+    "hitsLimitMinutes": 2,
+    "percent": 1,
+    "ratePerHourRelative": 0.02
+  },
+  "expected": {
+    "percentNow": 45,
+    "rateKnown": true,
+    "ratePerHour": 36.4,
+    "hitsLimitInMinutes": 90.6,
+    "projectedAtReset": 117.9,
+    "aheadOfEvenPace": -15,
+    "confidence": "low"
+  }
+}

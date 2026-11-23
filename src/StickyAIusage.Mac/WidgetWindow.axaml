@@ -57,8 +57,14 @@
                                Foreground="{DynamicResource TextPrimaryBrush}" />
                     <TextBlock x:Name="SecondaryText" Margin="6,0,0,0" FontSize="12" VerticalAlignment="Center"
                                Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <!-- Pace chip (WidgetViewModel.ForecastChipText): "- limit ~4:12 PM",
+                         "→ $212"; colored by ForecastLevel in code. -->
+                    <TextBlock x:Name="ForecastText" Margin="6,0,0,0" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
+                               IsVisible="False" />
                     <TextBlock x:Name="StaleText" Margin="6,0,0,0" FontSize="11" VerticalAlignment="Center" IsVisible="False"
                                Foreground="{DynamicResource TextTertiaryBrush}" />
+                    <!-- "Codex 91%": another tool closer to its limit than Claude (WidgetViewModel.ExtraChips); filled in code. -->
+                    <StackPanel x:Name="ExtraChipsPanel" Orientation="Horizontal" VerticalAlignment="Center" IsVisible="False" />
 
                     <!-- Plan accounts: weekly window, remaining credits, last update. -->
                     <Rectangle x:Name="WeeklyDivider" Classes="pillDivider" />
@@ -70,6 +76,16 @@
                     <Rectangle x:Name="UpdatedDivider" Classes="pillDivider" />
                     <TextBlock x:Name="UpdatedText" FontSize="11" VerticalAlignment="Center"
                                Foreground="{DynamicResource TextTertiaryBrush}" />
+                </StackPanel>
+
+                <!-- Session lights (SessionLights): a dot per Claude Code session -
+                     amber needs you, green working, grey ring done - and "+N";
+                     one dot in the squeezed menu bar. Filled in code. -->
+                <StackPanel x:Name="LightsGroup" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0"
+                            IsVisible="False" Background="Transparent">
+                    <StackPanel x:Name="LightsDots" Orientation="Horizontal" VerticalAlignment="Center" />
+                    <TextBlock x:Name="LightsMoreText" Margin="3,0,0,0" FontSize="11" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextSecondaryBrush}" IsVisible="False" />
                 </StackPanel>
 
                 <!-- Day target (monthly cap only): today's spend, % of the daily
@@ -122,6 +138,11 @@
                     </StackPanel>
                     <StackPanel Grid.Column="1" VerticalAlignment="Top">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="2">
+                            <!-- An image of today's usage for a post: Copy, Save, Post on X / LinkedIn / Bluesky. -->
+                            <Button x:Name="ShareButton" Classes="icon" ToolTip.Tip="Share an image of today's usage"
+                                    ToolTip.ShowOnDisabled="True" AutomationProperties.Name="Share" Click="ShareButton_Click">
+                                <PathIcon Data="{StaticResource ShareIcon}" Width="13" Height="13" />
+                            </Button>
                             <Button x:Name="ThemeToggleButton" Classes="icon" ToolTip.Tip="Switch to the light theme" Click="ThemeToggleButton_Click">
                                 <PathIcon x:Name="ThemeToggleIcon" Data="{StaticResource MoonIcon}" Width="13" Height="13" />
                             </Button>
@@ -137,6 +158,29 @@
                     </StackPanel>
                 </Grid>
 
+                <!-- What the last Share did ("Image copied. Paste it into your post."). -->
+                <TextBlock x:Name="ShareStatusText" DockPanel.Dock="Top" IsVisible="False" Margin="6,-4,6,10"
+                           FontSize="11.5" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" />
+
+                <!-- Notice (WidgetViewModel.Notice): sign in again, install the
+                     plugin, or the one-time plugin tip - a message and a button
+                     that copies its command (the same as on Windows). -->
+                <Border x:Name="NoticeBar" DockPanel.Dock="Top" Classes="card" Padding="12,10" Margin="0,0,4,10" IsVisible="False">
+                    <StackPanel>
+                        <TextBlock x:Name="NoticeText" FontSize="11.5" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0" Spacing="6">
+                            <Button x:Name="ConnectNoticeButton" Classes="primary" Padding="12,3" FontSize="12" IsVisible="False"
+                                    ToolTip.Tip="Install the Claude Code plugin with one click, or copy the command for Claude Code"
+                                    Click="ConnectNoticeButton_Click" />
+                            <Button x:Name="CopyNoticeButton" Classes="primary" Padding="12,3" FontSize="12"
+                                    Click="CopyNoticeButton_Click" />
+                            <Button x:Name="DismissNoticeButton" Classes="secondary" Content="Dismiss" Padding="12,3" FontSize="12"
+                                    IsVisible="False" ToolTip.Tip="Don't show this tip again" Click="DismissNoticeButton_Click" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
                 <!-- Usage card: "Plan Usage Limits: <plan>", then one row for a
                      monthly cap, or 5-hour / weekly / credits rows for Pro or Max. -->
                 <Border x:Name="SummaryCard" DockPanel.Dock="Top" Classes="card" Padding="12,10,12,3" Margin="0,0,4,10">
@@ -147,28 +191,71 @@
                             <TextBlock x:Name="SummaryUpdatedText" Grid.Column="1" FontSize="11"
                                        Foreground="{DynamicResource TextTertiaryBrush}" />
                         </Grid>
-                        <ItemsControl x:Name="SummaryRowsList">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="vm:SummaryRow">
-                                    <StackPanel Margin="0,0,0,7">
-                                        <Grid ColumnDefinitions="*,Auto">
-                                            <TextBlock Text="{Binding Label}" FontSize="11.5" Foreground="{DynamicResource TextSecondaryBrush}" />
-                                            <TextBlock Grid.Column="1" Text="{Binding Value}" FontSize="11.5"
-                                                       Foreground="{DynamicResource TextPrimaryBrush}" />
-                                        </Grid>
-                                        <ProgressBar Classes="thin" Margin="0,7,0,0"
-                                                     IsVisible="{Binding Percent, Converter={x:Static c:Converters.HasValue}}"
-                                                     Value="{Binding Percent, Converter={x:Static c:Converters.OrZero}}"
-                                                     Foreground="{Binding Level, Converter={x:Static c:Converters.Level}}" />
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                        <!-- When the reading isn't current and no notice above covers it:
+                             why, and at most one way forward (WidgetViewModel.Health). -->
+                        <StackPanel x:Name="HealthPanel" Margin="0,0,0,9" IsVisible="False">
+                            <TextBlock x:Name="HealthText" FontSize="11.5" TextWrapping="Wrap"
+                                       Foreground="{DynamicResource TextSecondaryBrush}" />
+                            <Button x:Name="HealthButton" Classes="secondary" Padding="12,3" FontSize="12"
+                                    HorizontalAlignment="Left" Margin="0,8,0,0" Click="HealthButton_Click" />
+                        </StackPanel>
+                        <ItemsControl x:Name="SummaryRowsList" ItemTemplate="{StaticResource SummaryRowTemplate}" />
                     </StackPanel>
                 </Border>
 
+                <!-- The other tools (Codex): a card each under Claude's, with its title, where the
+                     numbers come from, a message when it reports none, and the same rows
+                     (WidgetViewModel.ProviderSections). -->
+                <ItemsControl x:Name="ProviderSectionsList" DockPanel.Dock="Top" IsVisible="False">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ProviderSection">
+                            <Border Classes="card" Padding="12,10,12,3" Margin="0,0,4,10">
+                                <StackPanel>
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="{Binding Title}" FontSize="12" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextPrimaryBrush}" />
+                                        <TextBlock Grid.Column="1" Text="{Binding UpdatedText}" FontSize="11"
+                                                   Foreground="{DynamicResource TextTertiaryBrush}" />
+                                    </Grid>
+                                    <TextBlock Text="{Binding SourceLabel}" Margin="0,2,0,0" FontSize="11"
+                                               IsVisible="{Binding SourceLabel, Converter={x:Static c:Converters.NotEmpty}}"
+                                               Foreground="{DynamicResource TextTertiaryBrush}" />
+                                    <TextBlock Text="{Binding Message}" Margin="0,7,0,0" FontSize="11.5" TextWrapping="Wrap"
+                                               IsVisible="{Binding Message, Converter={x:Static c:Converters.NotEmpty}}"
+                                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                                    <ItemsControl ItemsSource="{Binding Rows}" Margin="0,9,0,0"
+                                                  ItemTemplate="{StaticResource SummaryRowTemplate}" />
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- Without the plugin there are no lights: one line says how to get them. -->
+                <TextBlock x:Name="LightsHintText" DockPanel.Dock="Top" IsVisible="False" Margin="6,0,6,4"
+                           FontSize="11.5" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" />
+                <Button x:Name="LightsConnectButton" DockPanel.Dock="Top" Classes="link" IsVisible="False"
+                        HorizontalAlignment="Left" Margin="2,0,6,10" Padding="4,2" FontSize="11.5" Click="LightsConnect_Click" />
+
                 <TextBlock x:Name="NoSessionsText" DockPanel.Dock="Top" IsVisible="False" Margin="6,2,6,14"
                            FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" />
+
+                <!-- A newer version (Check for updates on, UpdateNotice): what's new on its release
+                     page, and the command that updates this copy. Never installed by the app. -->
+                <StackPanel x:Name="UpdatePanel" DockPanel.Dock="Bottom" IsVisible="False" Margin="4,8,10,8">
+                    <Button x:Name="UpdateLinkButton" Classes="link" HorizontalAlignment="Left" Padding="2,2" FontSize="11.5"
+                            Click="UpdateLink_Click" ToolTip.Tip="Opens the release page on GitHub" />
+                    <TextBlock x:Name="UpdateHowText" Margin="2,2,0,0" FontSize="11" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <Grid x:Name="UpdateCommandRow" ColumnDefinitions="*,Auto" Margin="2,4,0,0">
+                        <SelectableTextBlock x:Name="UpdateCommandText" FontFamily="Menlo,Consolas,monospace" FontSize="11"
+                                             TextWrapping="Wrap" VerticalAlignment="Center"
+                                             Foreground="{DynamicResource TextPrimaryBrush}" AutomationProperties.Name="Update command" />
+                        <Button x:Name="CopyUpdateButton" Grid.Column="1" Classes="secondary" Content="Copy" Padding="10,2"
+                                FontSize="11.5" Margin="8,0,0,0" VerticalAlignment="Center" Click="CopyUpdate_Click"
+                                ToolTip.Tip="Copy the update command" />
+                    </Grid>
+                </StackPanel>
 
                 <ScrollViewer x:Name="SessionsScroller" MaxHeight="560" Padding="0,0,10,0">
                     <ItemsControl x:Name="SessionsList" ItemTemplate="{StaticResource SessionCardTemplate}" />

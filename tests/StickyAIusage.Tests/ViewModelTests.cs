@@ -87,7 +87,7 @@ public class SessionCardViewModelTests
             vm.Rows.Select(r => r.Segments.Select(s => $"{s.Label}: {s.Value}")));
         Assert.Equal("$3.34", vm.CostText);
         Assert.Equal("acme-webapp", vm.Title);
-        Assert.Equal("#3c8e62c4 · ran 6m · last active just now", vm.Subtitle);
+        Assert.Equal("Sonnet 5 · #3c8e62c4 · ran 6m · last active just now", vm.Subtitle);
         Assert.True(vm.IsLive);
         Assert.Equal("Claude Code 2.1.273", vm.FooterText);
     }
@@ -142,7 +142,7 @@ public class SessionCardViewModelTests
         var c = SessionCardViewModel.From(Session(name: "Refactor payment retries", contextTokens: 1), Now);
 
         Assert.Equal("Refactor payment retries", a.Title);
-        Assert.StartsWith("acme-webapp · #3c8e62c4", a.Subtitle);
+        Assert.StartsWith("acme-webapp · Sonnet 5 · #3c8e62c4", a.Subtitle);
         Assert.Equal(a.Signature, b.Signature);
         Assert.NotEqual(a.Signature, c.Signature);
     }

@@ -1,0 +1,1 @@
+{"schema":1,"sessionId":"a1b2","observedAt":1794881636736,"rateLimitsAt":1794881636736,"rateLimits":[{"kind":"five_hour","percentUsed":20.5,"resetsAt":1794885236},{"kind":"seven_day","percentUsed":30,"resetsAt":1795400000000},{"kind":"seven_day_cowork","percentUsed":12,"resetsAt":"2026-11-20T05:00:00Z"},{"percentUsed":99},{"kind":"broken"}],"futureField":{"x":1}}

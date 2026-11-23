@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Builds "Sticky AI Usage.app" for macOS: a self-contained publish (no .NET
 # install needed to run it) wrapped in an app bundle that lives in the menu
-# bar (LSUIElement - no Dock icon), ad-hoc signed so Apple Silicon runs it.
+# bar (LSUIElement - no Dock icon), ad-hoc signed so Apple Silicon runs it
+# (signed with a Developer ID and notarized when the variables below are set).
 #
 #   scripts/build-mac-app.sh            # Apple Silicon (osx-arm64)
 #   scripts/build-mac-app.sh osx-x64    # Intel Macs
@@ -19,7 +20,7 @@ VERSION="${VERSION:-0.2.0}"
 
 rm -rf "$APP" "$OUT/StickyAIusage.app" "$PUBLISH"   # (StickyAIusage.app: the old bundle name)
 dotnet publish "$ROOT/src/StickyAIusage.Mac/StickyAIusage.Mac.csproj" -c Release -r "$RID" \
-  --self-contained true -p:UseAppHost=true -o "$PUBLISH"
+  --self-contained true -p:UseAppHost=true -p:Version="$VERSION" -o "$PUBLISH"
 
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp -R "$PUBLISH"/. "$APP/Contents/MacOS/"
@@ -49,13 +50,14 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>$VERSION</string>
     <key>CFBundleVersion</key><string>$VERSION</string>
-    <key>LSMinimumSystemVersion</key><string>12.0</string>
+    <key>LSMinimumSystemVersion</key><string>15.0</string>
     <key>LSUIElement</key><true/>
     <key>NSHighResolutionCapable</key><true/>
 </dict>
 </plist>
 PLIST
 
-codesign --force --deep --sign - "$APP"
-(cd "$OUT" && rm -f "StickyAIusage-$RID.zip" && ditto -c -k --keepParent "Sticky AI Usage.app" "StickyAIusage-$RID.zip")
+# Ad-hoc signed, or with a Developer ID and notarized when the release has the
+# signing secrets (scripts/sign-mac-app.sh says which variables), then zipped.
+bash "$ROOT/scripts/sign-mac-app.sh" "$APP" "$OUT/StickyAIusage-$RID.zip"
 echo "Built $APP"

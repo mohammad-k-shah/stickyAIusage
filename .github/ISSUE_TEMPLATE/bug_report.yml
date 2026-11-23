@@ -1,0 +1,73 @@
+name: Bug report
+description: Something doesn't work or shows the wrong numbers.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. The quickest way to a fix: open **Settings → Health**, click **Copy report** and
+        paste it below. It names the version, the usage source and every check, with your home folder written as `~`.
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows 11
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: The last line of Settings, for example "Sticky AI Usage 2.0.0 (3967cd3)".
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How you installed it
+      options:
+        - The one-line install script
+        - StickyAIusage-Setup-x64.exe
+        - winget
+        - Scoop
+        - A zip from the Releases page
+        - Built from source
+    validations:
+      required: true
+  - type: dropdown
+    id: source
+    attributes:
+      label: Usage source (Settings → Usage source)
+      options:
+        - Plugin
+        - Automatic
+        - Legacy
+        - "Off"
+        - I don't know
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what you expected
+      description: Steps to see it again help a lot. A screenshot of the pill or the panel too.
+    validations:
+      required: true
+  - type: textarea
+    id: health
+    attributes:
+      label: Health report
+      description: Settings → Health → Copy report.
+      render: text
+  - type: textarea
+    id: log
+    attributes:
+      label: Log excerpt (optional)
+      description: >-
+        The lines around the problem from diagnostics.log (Settings → Open log folder). The log writes your home
+        folder as ~; read it before pasting all the same.
+      render: text

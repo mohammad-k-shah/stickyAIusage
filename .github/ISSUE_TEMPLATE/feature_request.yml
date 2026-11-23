@@ -1,0 +1,29 @@
+name: Feature idea
+description: Something the widget, the panel or the Claude Code plugin could do.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check the [roadmap](https://github.com/mohammad-k-shah/stickyAIusage/blob/main/docs/ROADMAP.md) first: if your idea
+        is there, a 👍 on its issue moves it up.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What you'd like to know or do
+      description: The situation it would help in ("I hit my weekly limit on Thursdays without noticing…").
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: How it could work
+      description: Where it would show (pill, panel, Settings, Claude Code), and what it would say.
+  - type: dropdown
+    id: help
+    attributes:
+      label: Would you like to build it?
+      options:
+        - Not this time
+        - Yes, with some pointers
+        - Yes, I'll open a pull request

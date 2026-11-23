@@ -1,0 +1,22 @@
+<Project>
+
+  <!-- Applies to every project in the repository. A warning fails the build,
+       so "builds with 0 warnings" is checked by the compiler on every machine
+       and in CI rather than by whoever reads the build log. Fix a warning at
+       its cause; don't silence it. -->
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- The same source gives the same binaries (the compiler's default, stated). -->
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+  <!-- In GitHub Actions, builds record repository-relative paths instead of
+       the runner's own folders, so the published files depend on the commit
+       alone and their symbols point at the source on GitHub (Source Link,
+       part of the .NET SDK). Local builds keep full paths for debugging. -->
+  <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,1 @@
+{"schema":1,"source":"claude-code-mod","pluginVersion":"2.0.0","claudeCodeVersion":"2.1.325","surface":"desktop","sessionId":"5b0c1f9e-2d6a-4e57-9d1e-0f4c8a7b3c21","observedAt":1794881636736,"rateLimitsAt":1794881636736,"context":{"window":200000},"rateLimits":[{"kind":"spend_limit","percentUsed":63.4,"resetsAt":"2026-12-01T00:00:00.000Z"}],"cost":{"usd":1.25},"state":"idle"}

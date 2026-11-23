@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "name": "whole points small rise",
+  "note": "A whole-point source needs a rise of 2; this one rose by 1: no rate.",
+  "kind": "five_hour",
+  "now": "2026-11-17T14:00:00Z",
+  "resetsInMinutes": 120,
+  "lengthMinutes": 300,
+  "wholePointsOnly": true,
+  "samples": [
+    {
+      "minutes": -30,
+      "percent": 10
+    },
+    {
+      "minutes": -20,
+      "percent": 10
+    },
+    {
+      "minutes": -10,
+      "percent": 11
+    },
+    {
+      "minutes": 0,
+      "percent": 11
+    }
+  ],
+  "tolerance": {
+    "hitsLimitMinutes": 2,
+    "percent": 1,
+    "ratePerHourRelative": 0.02
+  },
+  "expected": {
+    "percentNow": 11,
+    "rateKnown": false,
+    "ratePerHour": null,
+    "hitsLimitInMinutes": null,
+    "aheadOfEvenPace": -49,
+    "confidence": "none"
+  }
+}

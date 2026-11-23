@@ -68,7 +68,7 @@ public class PriceTableTests
             Line("claude-opus-5", 1_000_000, 0, 1_000_000),    // $25 + $10
             Line("claude-sonnet-5", 1_000_000, 1_000_000, 0));  // $10 + $2.50
 
-        var session = ClaudeSessionLogReader.ReadSession(path)!;
+        var session = Readers.For(dir).ReadSession(path)!;
         Assert.Equal(47.5m, session.EstimatedCostUsd);
         Assert.Equal("claude-sonnet-5", session.Model); // the model it's on now
     }

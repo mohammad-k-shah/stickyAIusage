@@ -2,6 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:c="clr-namespace:StickyAIusage.Controls"
+        xmlns:h="clr-namespace:StickyAIusage.Health;assembly=StickyAIusage.Core"
         Title="Sticky AI Usage Settings"
         Width="500" SizeToContent="Height" ResizeMode="NoResize" WindowStartupLocation="CenterScreen"
         Background="{DynamicResource WindowBackgroundBrush}"
@@ -60,6 +61,36 @@
             <Setter Property="Height" Value="1" />
             <Setter Property="Fill" Value="{DynamicResource SubtleBorderBrush}" />
         </Style>
+        <!-- Settings → Health: a dot by status, the button only when the item has one. -->
+        <Style x:Key="HealthDot" TargetType="Ellipse">
+            <Setter Property="Width" Value="9" />
+            <Setter Property="Height" Value="9" />
+            <Setter Property="VerticalAlignment" Value="Top" />
+            <Setter Property="Margin" Value="0,5,0,0" />
+            <Setter Property="Fill" Value="{DynamicResource TextTertiaryBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Status}" Value="{x:Static h:HealthStatus.Ok}">
+                    <Setter Property="Fill" Value="{DynamicResource GoodBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="{x:Static h:HealthStatus.Warn}">
+                    <Setter Property="Fill" Value="{DynamicResource WarnBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="{x:Static h:HealthStatus.Fail}">
+                    <Setter Property="Fill" Value="{DynamicResource DangerBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="HealthActionButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+            <Setter Property="Padding" Value="12,3" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="12,0,0,0" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding ActionLabel}" Value="{x:Null}">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
         <Style x:Key="ThresholdLabel" TargetType="TextBlock">
             <Setter Property="FontSize" Value="12" />
             <Setter Property="Margin" Value="7,0,0,0" />
@@ -72,7 +103,10 @@
          reaches its maximum height (the screen's work area, set in code). -->
     <DockPanel TextElement.Foreground="{DynamicResource TextPrimaryBrush}"
                TextElement.FontFamily="{StaticResource UiFont}" TextElement.FontSize="13">
-    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="24,14,24,22">
+    <!-- Which build this is, for bug reports (AppIdentity): the same words as the log's start line. -->
+    <TextBlock x:Name="BuildInfoText" DockPanel.Dock="Bottom" Margin="24,0,24,14" FontSize="11" TextWrapping="Wrap"
+               Foreground="{DynamicResource TextTertiaryBrush}" />
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="24,14,24,10">
         <Button Content="Cancel" Style="{StaticResource SecondaryButton}" IsCancel="True" MinWidth="88" Click="Cancel_Click" />
         <Button x:Name="SaveButton" Content="Save" Style="{StaticResource PrimaryButton}" IsDefault="True" MinWidth="88"
                 Margin="8,0,0,0" Click="Save_Click" />
@@ -97,6 +131,43 @@
                            Foreground="{DynamicResource TextSecondaryBrush}" />
             </StackPanel>
         </StackPanel>
+
+        <!-- Health (Core HealthCheck): what works, and what to do about what doesn't.
+             The flyout's "Open Health" scrolls here. -->
+        <TextBlock x:Name="HealthTitle" Text="Health" Style="{StaticResource SectionTitle}" />
+        <Border x:Name="HealthCard" Style="{StaticResource Card}" Padding="0" Margin="0,0,0,18">
+            <StackPanel>
+                <ItemsControl x:Name="HealthList" Margin="0,4,0,0">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type h:HealthItem}">
+                            <Grid Margin="16,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="18" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Ellipse Style="{StaticResource HealthDot}" />
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="{Binding Title}" Style="{StaticResource RowTitle}" />
+                                    <TextBlock Text="{Binding Detail}" Style="{StaticResource RowHint}" />
+                                </StackPanel>
+                                <Button Grid.Column="2" Content="{Binding ActionLabel}" Tag="{Binding ActionId}"
+                                        Style="{StaticResource HealthActionButton}" Click="HealthAction_Click"
+                                        AutomationProperties.HelpText="{Binding Title}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Grid Margin="16,6,16,12">
+                    <TextBlock x:Name="HealthNoteText" Style="{StaticResource RowHint}" VerticalAlignment="Center" Margin="0,0,180,0" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button x:Name="CheckHealthButton" Content="Check again" Style="{StaticResource SecondaryButton}" Click="CheckHealth_Click" />
+                        <Button x:Name="CopyReportButton" Content="Copy report" Style="{StaticResource SecondaryButton}" Margin="8,0,0,0"
+                                Click="CopyReport_Click" ToolTip="Versions, sources and every check as plain text, for a bug report. Your home folder reads ~." />
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </Border>
 
         <!-- Widget -->
         <!-- Appearance -->
@@ -145,8 +216,48 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="Pace forecast" Style="{StaticResource RowTitle}" />
+                        <TextBlock Text="When a limit comes at the current pace, if it comes before the reset (an estimate)" Style="{StaticResource RowHint}" />
+                    </StackPanel>
+                    <CheckBox x:Name="ShowForecastCheck" Grid.Column="1" Style="{StaticResource ToggleSwitch}"
+                              VerticalAlignment="Center" AutomationProperties.Name="Show the pace forecast" />
+                </Grid>
+                <Rectangle Style="{StaticResource RowDivider}" />
+                <Grid Style="{StaticResource Row}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="Session lights" Style="{StaticResource RowTitle}" />
+                        <TextBlock Text="A dot per Claude Code session on the pill: amber when it needs you, green while it works (needs the plugin)" Style="{StaticResource RowHint}" />
+                    </StackPanel>
+                    <CheckBox x:Name="ShowSessionLightsCheck" Grid.Column="1" Style="{StaticResource ToggleSwitch}"
+                              VerticalAlignment="Center" AutomationProperties.Name="Show the session lights" />
+                </Grid>
+                <Rectangle Style="{StaticResource RowDivider}" />
+                <!-- Providers: the other tools beside Claude (OtherProviders.CodexSettingsHint). -->
+                <Grid Style="{StaticResource Row}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="Codex" Style="{StaticResource RowTitle}" />
+                        <TextBlock x:Name="CodexHintText" Style="{StaticResource RowHint}" />
+                    </StackPanel>
+                    <CheckBox x:Name="ShowCodexCheck" Grid.Column="1" Style="{StaticResource ToggleSwitch}"
+                              VerticalAlignment="Center" AutomationProperties.Name="Show Codex" />
+                </Grid>
+                <Rectangle Style="{StaticResource RowDivider}" />
+                <Grid Style="{StaticResource Row}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Margin="0,0,16,0">
                         <TextBlock Text="Current session cost" Style="{StaticResource RowTitle}" />
-                        <TextBlock Text="Estimated cost of your most recent Claude Code session" Style="{StaticResource RowHint}" />
+                        <TextBlock Text="Cost of your most recent Claude Code session (an estimate unless the plugin reports it)" Style="{StaticResource RowHint}" />
                     </StackPanel>
                     <CheckBox x:Name="ShowSessionCostCheck" Grid.Column="1" Style="{StaticResource ToggleSwitch}"
                               VerticalAlignment="Center" AutomationProperties.Name="Show current session cost" />
@@ -209,6 +320,36 @@
             </StackPanel>
         </Border>
 
+        <!-- Usage source: where plan limits come from (ClaudeSource). The
+             segments, the description and the warning come from Core
+             (UsageSourceOptions), so both apps say the same. -->
+        <TextBlock Text="Usage source" Style="{StaticResource SectionTitle}" />
+        <Border Style="{StaticResource Card}" Padding="0" Margin="0,0,0,18">
+            <StackPanel Margin="16,12">
+                <TextBlock Text="Where your plan limits come from" Style="{StaticResource RowTitle}" />
+                <Border HorizontalAlignment="Left" Margin="0,8,0,0" CornerRadius="8" Padding="2"
+                        Background="{DynamicResource InputBrush}" BorderBrush="{DynamicResource SubtleBorderBrush}" BorderThickness="1">
+                    <StackPanel x:Name="SourceSegments" Orientation="Horizontal" />
+                </Border>
+                <TextBlock x:Name="SourceDescription" Style="{StaticResource RowHint}" Margin="0,8,0,0" />
+                <TextBlock x:Name="SourceWarning" Style="{StaticResource RowHint}" Margin="0,6,0,0"
+                           Foreground="{DynamicResource CautionBrush}" Visibility="Collapsed" />
+                <Grid x:Name="PluginInstallRow" Margin="0,10,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="Get the plugin: run this once in a terminal" Style="{StaticResource RowHint}" Margin="0" />
+                        <TextBlock x:Name="PluginCommandText" Margin="0,3,0,0" FontFamily="Consolas" FontSize="11.5"
+                                   TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}" />
+                    </StackPanel>
+                    <Button x:Name="CopyPluginCommandButton" Grid.Column="1" Content="Copy" Style="{StaticResource SecondaryButton}"
+                            VerticalAlignment="Center" Click="CopyPluginCommand_Click" />
+                </Grid>
+            </StackPanel>
+        </Border>
+
         <!-- Spend alerts -->
         <!-- Session cards -->
         <TextBlock Text="Session cards" Style="{StaticResource SectionTitle}" />
@@ -227,10 +368,48 @@
             </Grid>
         </Border>
 
+        <!-- Share card: the image the flyout's Share button makes. -->
+        <TextBlock Text="Share card" Style="{StaticResource SectionTitle}" />
+        <Border Style="{StaticResource Card}" Padding="0" Margin="0,0,0,18">
+            <StackPanel>
+                <Grid Style="{StaticResource Row}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="Shape" Style="{StaticResource RowTitle}" />
+                        <TextBlock Text="Wide fits a link preview (1200×630); portrait fills a phone screen (1080×1350)" Style="{StaticResource RowHint}" />
+                    </StackPanel>
+                    <Border Grid.Column="1" VerticalAlignment="Center" CornerRadius="8" Padding="2"
+                            Background="{DynamicResource InputBrush}" BorderBrush="{DynamicResource SubtleBorderBrush}" BorderThickness="1">
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton x:Name="ShareWideButton" GroupName="ShareShape" Style="{StaticResource Segment}" Content="Wide" />
+                            <RadioButton x:Name="SharePortraitButton" GroupName="ShareShape" Style="{StaticResource Segment}" Content="Portrait" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+                <Rectangle Style="{StaticResource RowDivider}" />
+                <Grid Style="{StaticResource Row}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="Project names" Style="{StaticResource RowTitle}" />
+                        <TextBlock Text="Off: a shared session card says &quot;in a project&quot;. Branches, repositories and your account never appear"
+                                   Style="{StaticResource RowHint}" />
+                    </StackPanel>
+                    <CheckBox x:Name="ShareIncludeProjectNamesCheck" Grid.Column="1" Style="{StaticResource ToggleSwitch}"
+                              VerticalAlignment="Center" AutomationProperties.Name="Show project names on share cards" />
+                </Grid>
+            </StackPanel>
+        </Border>
+
         <TextBlock Text="Usage alerts" Style="{StaticResource SectionTitle}" />
         <Border Style="{StaticResource Card}" Margin="0,0,0,18">
             <StackPanel>
-                <TextBlock Text="The usage ring changes color as you use more of your cap or plan limits."
+                <TextBlock Text="The usage ring changes color as you use more of your cap or plan limits. Orange and red also notify you."
                            Style="{StaticResource RowHint}" Margin="0,0,0,14" />
 
                 <!-- Live preview of the four zones, sized by the thresholds. -->
@@ -279,6 +458,99 @@
             </StackPanel>
         </Border>
 
+        <!-- Notifications (AlertPlanner): which ones, quiet hours, a test. -->
+        <Border x:Name="AlertsCard" Style="{StaticResource Card}" Padding="0" Margin="0,-8,0,18">
+            <StackPanel>
+                <Grid Style="{StaticResource Row}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="Notifications" Style="{StaticResource RowTitle}" />
+                        <TextBlock Text="One quiet notification when a limit is near, reached, or back. Never the same one twice"
+                                   Style="{StaticResource RowHint}" />
+                    </StackPanel>
+                    <CheckBox x:Name="AlertsEnabledCheck" Grid.Column="1" Style="{StaticResource ToggleSwitch}"
+                              VerticalAlignment="Center" AutomationProperties.Name="Notifications"
+                              Checked="Alerts_Changed" Unchecked="Alerts_Changed" />
+                </Grid>
+                <StackPanel x:Name="AlertOptions" Margin="32,0,16,12">
+                    <Grid Margin="0,0,0,8">
+                        <TextBlock Text="At the orange and red thresholds" VerticalAlignment="Center" />
+                        <CheckBox x:Name="AlertOnThresholdCheck" HorizontalAlignment="Right" Style="{StaticResource ToggleSwitch}"
+                                  AutomationProperties.Name="Notify at the orange and red thresholds" />
+                    </Grid>
+                    <Grid Margin="0,0,0,8">
+                        <TextBlock Text="When the pace says a limit is near" VerticalAlignment="Center" />
+                        <CheckBox x:Name="AlertOnForecastCheck" HorizontalAlignment="Right" Style="{StaticResource ToggleSwitch}"
+                                  AutomationProperties.Name="Notify when the pace says a limit is near" />
+                    </Grid>
+                    <Grid Margin="0,0,0,8">
+                        <TextBlock Text="When a limit is reached" VerticalAlignment="Center" />
+                        <CheckBox x:Name="AlertOnLimitCheck" HorizontalAlignment="Right" Style="{StaticResource ToggleSwitch}"
+                                  AutomationProperties.Name="Notify when a limit is reached" />
+                    </Grid>
+                    <Grid Margin="0,0,0,8">
+                        <TextBlock Text="When a busy window resets" VerticalAlignment="Center" />
+                        <CheckBox x:Name="AlertOnResetCheck" HorizontalAlignment="Right" Style="{StaticResource ToggleSwitch}"
+                                  AutomationProperties.Name="Notify when a busy window resets" />
+                    </Grid>
+                    <Grid Margin="0,0,0,8">
+                        <TextBlock Text="When a Claude Code session needs you" VerticalAlignment="Center" />
+                        <CheckBox x:Name="AlertOnNeedsYouCheck" HorizontalAlignment="Right" Style="{StaticResource ToggleSwitch}"
+                                  AutomationProperties.Name="Notify when a Claude Code session needs you" />
+                    </Grid>
+                    <Grid>
+                        <TextBlock Text="When a long Claude Code task finishes" VerticalAlignment="Center" />
+                        <CheckBox x:Name="AlertOnDoneCheck" HorizontalAlignment="Right" Style="{StaticResource ToggleSwitch}"
+                                  AutomationProperties.Name="Notify when a long Claude Code task finishes" />
+                    </Grid>
+                </StackPanel>
+                <Rectangle Style="{StaticResource RowDivider}" />
+                <Grid Style="{StaticResource Row}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="Quiet hours" Style="{StaticResource RowTitle}" />
+                        <TextBlock Text="No notifications between these times; they are skipped, not saved for later"
+                                   Style="{StaticResource RowHint}" />
+                    </StackPanel>
+                    <CheckBox x:Name="QuietHoursCheck" Grid.Column="1" Style="{StaticResource ToggleSwitch}"
+                              VerticalAlignment="Center" AutomationProperties.Name="Quiet hours"
+                              Checked="Alerts_Changed" Unchecked="Alerts_Changed" />
+                </Grid>
+                <StackPanel x:Name="QuietHoursOptions" Margin="32,0,16,12">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="From" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <TextBox x:Name="QuietFromBox" Style="{StaticResource NumberBox}" Width="76"
+                                 AutomationProperties.Name="Quiet hours start" />
+                        <TextBlock Text="to" VerticalAlignment="Center" Margin="10,0,8,0" />
+                        <TextBox x:Name="QuietToBox" Style="{StaticResource NumberBox}" Width="76"
+                                 AutomationProperties.Name="Quiet hours end" />
+                    </StackPanel>
+                    <TextBlock x:Name="QuietHoursError" Visibility="Collapsed" Margin="0,8,0,0" FontSize="11.5"
+                               TextWrapping="Wrap" Foreground="{DynamicResource DangerBrush}" />
+                </StackPanel>
+                <Rectangle Style="{StaticResource RowDivider}" />
+                <Grid Style="{StaticResource Row}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="Test" Style="{StaticResource RowTitle}" />
+                        <TextBlock Text="Shows one notification now, so you can see where they appear"
+                                   Style="{StaticResource RowHint}" />
+                    </StackPanel>
+                    <Button x:Name="TestAlertButton" Grid.Column="1" Content="Send a test alert" Style="{StaticResource SecondaryButton}"
+                            VerticalAlignment="Center" Click="TestAlert_Click" />
+                </Grid>
+            </StackPanel>
+        </Border>
+
         <!-- General -->
         <TextBlock Text="General" Style="{StaticResource SectionTitle}" />
         <Border Style="{StaticResource Card}" Padding="0">
@@ -302,11 +574,59 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel Margin="0,0,16,0">
-                        <TextBlock Text="Widget position" Style="{StaticResource RowTitle}" />
-                        <TextBlock Text="Move the widget back next to the system tray" Style="{StaticResource RowHint}" />
+                        <TextBlock Text="Check for updates" Style="{StaticResource RowTitle}" />
+                        <TextBlock Text="Once a day, ask the project on GitHub whether a newer version is out, and fetch the latest model prices. Nothing about you is sent"
+                                   Style="{StaticResource RowHint}" />
                     </StackPanel>
-                    <Button Grid.Column="1" Content="Reset" Style="{StaticResource SecondaryButton}" VerticalAlignment="Center"
-                            Click="ResetPosition_Click" />
+                    <CheckBox x:Name="CheckForUpdatesCheck" Grid.Column="1" Style="{StaticResource ToggleSwitch}"
+                              VerticalAlignment="Center" AutomationProperties.Name="Check for updates" />
+                </Grid>
+                <Rectangle Style="{StaticResource RowDivider}" />
+                <!-- Where the pill docks (Core DockModes): in the taskbar, or above it; a drag leaves it free. -->
+                <StackPanel Margin="16,12">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Margin="0,0,16,0">
+                            <TextBlock Text="Widget position" Style="{StaticResource RowTitle}" />
+                            <TextBlock x:Name="DockHintText" Style="{StaticResource RowHint}" />
+                        </StackPanel>
+                        <Button Grid.Column="1" Content="Reset" Style="{StaticResource SecondaryButton}" VerticalAlignment="Center"
+                                Click="ResetPosition_Click" ToolTip="Dock the widget again now" />
+                    </Grid>
+                    <Border HorizontalAlignment="Left" Margin="0,8,0,0" CornerRadius="8" Padding="2"
+                            Background="{DynamicResource InputBrush}" BorderBrush="{DynamicResource SubtleBorderBrush}" BorderThickness="1">
+                        <StackPanel Orientation="Horizontal">
+                            <ToggleButton x:Name="DockTaskbarButton" Style="{StaticResource Segment}" Content="In the taskbar"
+                                          Checked="Dock_Checked" Unchecked="Dock_Unchecked" />
+                            <ToggleButton x:Name="DockAboveButton" Style="{StaticResource Segment}" Content="Above the taskbar"
+                                          Checked="Dock_Checked" Unchecked="Dock_Unchecked" />
+                        </StackPanel>
+                    </Border>
+                    <!-- With several monitors: which one's taskbar (segments built in code, one per monitor). -->
+                    <StackPanel x:Name="DockMonitorRow" Margin="0,10,0,0">
+                        <TextBlock Text="On the taskbar of" Style="{StaticResource RowHint}" Margin="0,0,0,6" />
+                        <Border HorizontalAlignment="Left" CornerRadius="8" Padding="2"
+                                Background="{DynamicResource InputBrush}" BorderBrush="{DynamicResource SubtleBorderBrush}" BorderThickness="1">
+                            <WrapPanel x:Name="DockMonitorSegments" />
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
+                <Rectangle Style="{StaticResource RowDivider}" />
+                <Grid Style="{StaticResource Row}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="Hide in full screen" Style="{StaticResource RowTitle}" />
+                        <TextBlock Text="Step aside while a full-screen app, a film or a presentation is on the widget's monitor, so a screen share never shows your numbers"
+                                   Style="{StaticResource RowHint}" />
+                    </StackPanel>
+                    <CheckBox x:Name="HideWhenFullscreenCheck" Grid.Column="1" Style="{StaticResource ToggleSwitch}"
+                              VerticalAlignment="Center" AutomationProperties.Name="Hide in full screen" />
                 </Grid>
                 <Rectangle Style="{StaticResource RowDivider}" />
                 <Grid Style="{StaticResource Row}">

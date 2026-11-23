@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- What the hardened runtime must allow for a .NET app (scripts/build-mac-app.sh uses it
+     only when it signs with a Developer ID): the JIT compiles code into memory it then
+     runs, and the runtime loads its own native libraries. Nothing else is asked for: no
+     network server, camera, files outside the user's own, or Apple events. -->
+<plist version="1.0">
+<dict>
+    <key>com.apple.security.cs.allow-jit</key><true/>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key><true/>
+    <key>com.apple.security.cs.disable-library-validation</key><true/>
+</dict>
+</plist>

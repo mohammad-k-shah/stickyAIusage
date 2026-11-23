@@ -3,6 +3,25 @@ using StickyAIusage.Services;
 
 namespace StickyAIusage.Tests;
 
+/// <summary>Runs before any test: points the app's data folder and the log
+/// at a temp folder, so no test can write to the real
+/// %LOCALAPPDATA%\StickyAIusage (on a developer's machine the installed widget uses it).</summary>
+internal static class TestIsolation
+{
+    [System.Runtime.CompilerServices.ModuleInitializer]
+    internal static void Initialize()
+    {
+        var root = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "stickyaiusage-tests");
+        Environment.SetEnvironmentVariable(AppPaths.DataDirectoryVariable, System.IO.Path.Combine(root, "data"));
+        Environment.SetEnvironmentVariable(AppPaths.FeedDirectoryVariable, System.IO.Path.Combine(root, "feed"));
+        DiagnosticLog.PathOverride = System.IO.Path.Combine(root, "diagnostics.log");
+        // Times of day follow the OS format; the expected texts and the
+        // screenshots are written for a 12-hour English clock.
+        System.Globalization.CultureInfo.DefaultThreadCurrentCulture = System.Globalization.CultureInfo.GetCultureInfo("en-US");
+        System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.GetCultureInfo("en-US");
+    }
+}
+
 /// <summary>A throwaway directory, deleted on dispose.</summary>
 public sealed class TempDir : IDisposable
 {
@@ -76,4 +95,11 @@ public static class Transcript
     }
 
     public static void Append(string path, string text) => File.AppendAllText(path, text);
+}
+
+/// <summary>A session reader over a test folder. Its index starts only when a
+/// question needs the folder, so reading single files starts no watcher.</summary>
+public static class Readers
+{
+    public static ClaudeSessionLogReader For(TempDir dir) => new(new TranscriptIndex(dir.Path));
 }

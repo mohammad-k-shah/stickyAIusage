@@ -29,4 +29,18 @@ public class DiagnosticLogTests
 
         Assert.Equal($"Could not read {Path.Combine("~", ".claude", ".credentials.json")}", DiagnosticLog.HideHome(message));
     }
+
+    [Theory]
+    // Seen in a Mac log: Claude Code's project folder names carry the home folder, encoded.
+    [InlineData("/Users/jane.doe", '/',
+        "path=/Users/jane.doe/.claude/projects/-Users-jane-doe-Documents-Projects-App/a.jsonl",
+        "path=~/.claude/projects/~-Documents-Projects-App/a.jsonl")]
+    [InlineData(@"C:\Users\Jane", '\\',
+        @"path=C:\Users\Jane\.claude\projects\C--Users-jane-dev-app\b.jsonl",
+        @"path=~\.claude\projects\~-dev-app\b.jsonl")]
+    [InlineData("/home/jane", '/', "project -home-jane", "project -home-jane")] // not followed by a folder: left alone
+    [InlineData("/Users/jane", '/', "-Users-janet-dev and /Users/janet/x", "-Users-janet-dev and /Users/janet/x")] // another account
+    public void The_home_folder_is_hidden_in_Claude_Code_s_project_folder_names_too(string home, char separator, string line,
+        string expected) =>
+        Assert.Equal(expected, DiagnosticLog.HideHome(line, home, separator));
 }

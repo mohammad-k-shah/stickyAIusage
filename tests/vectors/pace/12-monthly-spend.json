@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "name": "monthly spend",
+  "note": "3 points a day over 6 days = 0.125/h; 32 left = 256 h, after the reset in 240 h. Projection 68 + 3 x 10 = 98. Elapsed 20 of 30 days = even 66.7, so +1.3. 7 samples over 6 days (>= 5.6): high.",
+  "kind": "month_spend",
+  "now": "2026-11-21T00:00:00Z",
+  "resetsInMinutes": 14400,
+  "lengthMinutes": 43200,
+  "wholePointsOnly": false,
+  "samples": [
+    {
+      "minutes": -8640,
+      "percent": 50
+    },
+    {
+      "minutes": -7200,
+      "percent": 53
+    },
+    {
+      "minutes": -5760,
+      "percent": 56
+    },
+    {
+      "minutes": -4320,
+      "percent": 59
+    },
+    {
+      "minutes": -2880,
+      "percent": 62
+    },
+    {
+      "minutes": -1440,
+      "percent": 65
+    },
+    {
+      "minutes": 0,
+      "percent": 68
+    }
+  ],
+  "tolerance": {
+    "hitsLimitMinutes": 2,
+    "percent": 1,
+    "ratePerHourRelative": 0.02
+  },
+  "expected": {
+    "percentNow": 68,
+    "rateKnown": true,
+    "ratePerHour": 0.125,
+    "hitsLimitInMinutes": null,
+    "projectedAtReset": 98,
+    "aheadOfEvenPace": 1.3,
+    "confidence": "high"
+  }
+}

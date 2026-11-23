@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "name": "burst then idle",
+  "note": "Last rise 20 minutes ago (> 10): not active, so no limit time and the projection uses the window average: 30% in 100 min = 18/h, 30 + 18 x 200/60 = 90. Slope of the 5 points = 35.2/h; 5 samples: low.",
+  "kind": "five_hour",
+  "now": "2026-11-17T14:00:00Z",
+  "resetsInMinutes": 200,
+  "lengthMinutes": 300,
+  "wholePointsOnly": false,
+  "samples": [
+    {
+      "minutes": -30,
+      "percent": 10
+    },
+    {
+      "minutes": -25,
+      "percent": 20
+    },
+    {
+      "minutes": -20,
+      "percent": 30
+    },
+    {
+      "minutes": -10,
+      "percent": 30
+    },
+    {
+      "minutes": 0,
+      "percent": 30
+    }
+  ],
+  "tolerance": {
+    "hitsLimitMinutes": 2,
+    "percent": 1,
+    "ratePerHourRelative": 0.02
+  },
+  "expected": {
+    "percentNow": 30,
+    "rateKnown": true,
+    "ratePerHour": 35.2,
+    "hitsLimitInMinutes": null,
+    "projectedAtReset": 90,
+    "aheadOfEvenPace": -3.3,
+    "confidence": "low"
+  }
+}

@@ -1,13 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!-- The macOS app: the same widget as the Windows (WPF) app, built with
-       Avalonia on the shared Core library. Plain net8.0, so no Xcode or
+       Avalonia on the shared Core library. Plain net10.0, so no Xcode or
        macOS workload is needed; scripts/build-mac-app.sh wraps the published
        output in a .app bundle. -->
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
-    <Nullable>enable</Nullable>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>StickyAIusage</AssemblyName>

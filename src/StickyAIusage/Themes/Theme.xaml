@@ -363,6 +363,32 @@
         </Setter>
     </Style>
 
+    <!-- A text button, as in a card's Details / Less toggle. -->
+    <Style x:Key="LinkButton" TargetType="Button">
+        <Setter Property="OverridesDefaultStyle" Value="True" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd" CornerRadius="4" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource HoverOverlayBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource HoverOverlayBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- Segmented choice, as in the flyout's Today | 2d | 1w date range. -->
     <Style x:Key="SegmentTab" TargetType="RadioButton">
         <Setter Property="OverridesDefaultStyle" Value="True" />
@@ -578,6 +604,16 @@
                                                Foreground="{DynamicResource GoodBrush}" />
                                 </StackPanel>
                             </Border>
+                            <!-- With the plugin: the session's status in place of Live
+                                 ("Needs you: permission", "Working", "Done 3m ago"). -->
+                            <Border x:Name="StatusBadge" Visibility="Collapsed" Background="{DynamicResource GoodSoftBrush}"
+                                    CornerRadius="8" Padding="6,1,7,1" Margin="0,0,7,0" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal">
+                                    <Ellipse x:Name="StatusDot" Width="6" Height="6" Fill="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="StatusLabel" Text="{Binding StatusText, Mode=OneWay}" Margin="4,0,0,0" FontSize="10.5"
+                                               FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                </StackPanel>
+                            </Border>
                             <TextBlock Text="{Binding Title, Mode=OneWay}" ToolTip="{Binding Title, Mode=OneWay}"
                                        FontSize="13.5" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"
                                        TextTrimming="CharacterEllipsis" MaxWidth="330" VerticalAlignment="Center" />
@@ -585,15 +621,18 @@
                         <TextBlock Text="{Binding Subtitle, Mode=OneWay}" Margin="0,3,0,0" FontSize="11.5"
                                    Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" />
                     </StackPanel>
-                    <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                    <StackPanel Grid.Column="1" Margin="12,0,0,0" Background="Transparent"
+                                ToolTip="{Binding CostToolTip, Mode=OneWay}">
                         <TextBlock Text="{Binding CostText, Mode=OneWay}" FontSize="19" FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Right" />
-                        <TextBlock Text="est. cost" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}"
+                        <TextBlock Text="{Binding CostLabel, Mode=OneWay}" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}"
                                    HorizontalAlignment="Right" Margin="0,-1,0,0" />
                     </StackPanel>
                 </Grid>
 
-                <!-- One chip row per row the user arranged (Settings > Fields). -->
+                <!-- Details (open with the toggle at the bottom): one chip row per row
+                     the user arranged (Settings > Fields), git and the footer. -->
+                <StackPanel x:Name="DetailsTop" Visibility="{Binding ShowDetails, Converter={StaticResource BoolToVis}}">
                 <ItemsControl ItemsSource="{Binding Rows, Mode=OneWay}" Focusable="False">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="{x:Type vm:SegmentRow}">
@@ -601,6 +640,7 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
+                </StackPanel>
 
                 <!-- Context window usage. -->
                 <StackPanel Margin="0,6,0,0" Visibility="{Binding HasContext, Converter={StaticResource BoolToVis}}">
@@ -613,6 +653,7 @@
                                  Value="{Binding ContextPercent, Mode=OneWay}" />
                 </StackPanel>
 
+                <StackPanel Visibility="{Binding ShowDetails, Converter={StaticResource BoolToVis}}">
                 <!-- Git. -->
                 <WrapPanel Margin="0,10,0,0" Visibility="{Binding HasGit, Converter={StaticResource BoolToVis}}">
                     <WrapPanel.Resources>
@@ -651,12 +692,43 @@
                 <TextBlock Text="{Binding FooterText, Mode=OneWay}" Margin="0,8,0,0" FontSize="10.5" TextWrapping="Wrap"
                            Foreground="{DynamicResource TextTertiaryBrush}"
                            Visibility="{Binding HasFooter, Converter={StaticResource BoolToVis}}" />
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Margin="-2,6,0,0">
+                    <Button Tag="details" Content="{Binding DetailsToggleText, Mode=OneWay}" Margin="0,0,10,0"
+                            Padding="2,1" FontSize="11" Cursor="Hand" Style="{StaticResource LinkButton}"
+                            AutomationProperties.Name="Session details"
+                            Visibility="{Binding ShowDetailsToggle, Converter={StaticResource BoolToVis}}" />
+                    <!-- An image of this session for a post (the window opens the Share menu). -->
+                    <Button Tag="share" Content="Share" Padding="2,1" FontSize="11" Cursor="Hand" Style="{StaticResource LinkButton}"
+                            AutomationProperties.Name="Share this session" ToolTip="Share an image of this session"
+                            Visibility="{Binding ShowShare, Converter={StaticResource BoolToVis}, Mode=OneWay}" />
+                </StackPanel>
             </StackPanel>
         </Border>
         <DataTemplate.Triggers>
-            <DataTrigger Binding="{Binding IsLive}" Value="True">
+            <DataTrigger Binding="{Binding ShowLive}" Value="True">
                 <Setter TargetName="LiveBadge" Property="Visibility" Value="Visible" />
                 <Setter TargetName="Card" Property="BorderBrush" Value="#594CC38A" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding HasStatus}" Value="True">
+                <Setter TargetName="StatusBadge" Property="Visibility" Value="Visible" />
+                <Setter TargetName="StatusBadge" Property="Background" Value="{DynamicResource HoverOverlayBrush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding StatusKind}" Value="NeedsYou">
+                <Setter TargetName="StatusDot" Property="Fill" Value="{DynamicResource ColorOrange}" />
+                <Setter TargetName="StatusLabel" Property="Foreground" Value="{DynamicResource ColorOrange}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding NeedsYou}" Value="True">
+                <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource ColorOrange}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding StatusKind}" Value="Working">
+                <Setter TargetName="StatusDot" Property="Fill" Value="{DynamicResource GoodBrush}" />
+                <Setter TargetName="StatusLabel" Property="Foreground" Value="{DynamicResource GoodBrush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding StatusKind}" Value="RateLimited">
+                <Setter TargetName="StatusDot" Property="Fill" Value="{DynamicResource ColorRed}" />
+                <Setter TargetName="StatusLabel" Property="Foreground" Value="{DynamicResource ColorRed}" />
             </DataTrigger>
             <DataTrigger Binding="{Binding ContextLevel}" Value="Warn">
                 <Setter TargetName="ContextBar" Property="Foreground" Value="{DynamicResource WarnBrush}" />

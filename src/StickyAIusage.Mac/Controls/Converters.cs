@@ -49,6 +49,23 @@ public static class Palette
         ? (IsDark ? Brush("#594CC38A") : Brush("#5915875A"))
         : (IsDark ? Brush("#FF33333B") : Brush("#FFE2E2E9"));
 
+    /// <summary>A session light or status chip: amber needs you, green working,
+    /// red rate limited, grey otherwise.</summary>
+    public static IBrush ForLight(LightKind kind) => kind switch
+    {
+        LightKind.NeedsYou => Orange,
+        LightKind.Working => Green,
+        LightKind.RateLimited => Red,
+        _ => Grey
+    };
+
+    public static IBrush Grey => IsDark ? DarkGrey : LightGrey;
+    private static readonly IBrush DarkGrey = Brush("#8A8A94");
+    private static readonly IBrush LightGrey = Brush("#7A7A86");
+
+    /// <summary>A card that needs you gets an amber border; a live one the green tint.</summary>
+    public static IBrush CardBorder(SessionCardViewModel card) => card.NeedsYou ? Orange : CardBorder(card.ShowLive);
+
     public static IBrush ForLevel(UsageLevel level) => level switch
     {
         UsageLevel.Red => Red,
@@ -83,6 +100,12 @@ public static class Converters
 
     public static readonly IValueConverter LiveBorder =
         new FuncValueConverter<bool, IBrush>(Palette.CardBorder);
+
+    public static readonly IValueConverter CardBorder =
+        new FuncValueConverter<SessionCardViewModel, IBrush>(c => c is null ? Palette.CardBorder(false) : Palette.CardBorder(c));
+
+    public static readonly IValueConverter Light =
+        new FuncValueConverter<LightKind, IBrush>(Palette.ForLight);
 
     public static readonly IValueConverter NotEmpty =
         new FuncValueConverter<string?, bool>(s => !string.IsNullOrEmpty(s));

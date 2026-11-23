@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "name": "weekly runs out in a day",
+  "note": "2 points per 2 hours = 1/h over the last 12 hours; 24 left = 24 h, before the reset in 72 h. Projection 76 + 72 = 148. 7 samples span 12 h < 19.2 h: low. Even 57.1, so +18.9.",
+  "kind": "seven_day",
+  "now": "2026-11-17T14:00:00Z",
+  "resetsInMinutes": 4320,
+  "lengthMinutes": 10080,
+  "wholePointsOnly": false,
+  "samples": [
+    {
+      "minutes": -720,
+      "percent": 64
+    },
+    {
+      "minutes": -600,
+      "percent": 66
+    },
+    {
+      "minutes": -480,
+      "percent": 68
+    },
+    {
+      "minutes": -360,
+      "percent": 70
+    },
+    {
+      "minutes": -240,
+      "percent": 72
+    },
+    {
+      "minutes": -120,
+      "percent": 74
+    },
+    {
+      "minutes": 0,
+      "percent": 76
+    }
+  ],
+  "tolerance": {
+    "hitsLimitMinutes": 2,
+    "percent": 1,
+    "ratePerHourRelative": 0.02
+  },
+  "expected": {
+    "percentNow": 76,
+    "rateKnown": true,
+    "ratePerHour": 1,
+    "hitsLimitInMinutes": 1440,
+    "projectedAtReset": 148,
+    "aheadOfEvenPace": 18.9,
+    "confidence": "low"
+  }
+}

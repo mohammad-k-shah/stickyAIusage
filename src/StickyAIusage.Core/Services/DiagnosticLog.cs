@@ -23,9 +23,7 @@ public static class DiagnosticLog
     internal const long MaxBytes = 1_000_000;
 
     // People paste this file into public issues, and their home folder path
-    // carries their account name.
-    private static readonly string HomePrefix =
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + Path.DirectorySeparatorChar;
+    // carries their account name: HideHome writes it as "~".
 
     public static void WriteError(string context, Exception ex) =>
         WriteLine($"{context}: {ex}");
@@ -60,7 +58,21 @@ public static class DiagnosticLog
     }
 
     internal static string HideHome(string message) =>
-        HomePrefix.Length > 1
-            ? message.Replace(HomePrefix, "~" + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
-            : message;
+        HideHome(message, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), Path.DirectorySeparatorChar);
+
+    /// <summary>The home folder as "~", in both forms a line can carry it: the path itself, and
+    /// the copy Claude Code bakes into its project folder names, where every character but
+    /// letters and digits becomes "-" ("/Users/jane/dev/app" → "-Users-jane-dev-app";
+    /// "C:\Users\jane\dev" → "C--Users-jane-dev"), which still names the account.</summary>
+    internal static string HideHome(string message, string home, char separator)
+    {
+        if (home.Length < 2)
+            return message;
+        var hidden = message.Replace(home.TrimEnd(separator) + separator, "~" + separator, StringComparison.OrdinalIgnoreCase);
+        var encoded = EncodedHome(home.TrimEnd(separator));
+        return encoded.Length < 3 ? hidden : hidden.Replace(encoded + "-", "~-", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string EncodedHome(string home) =>
+        string.Concat(home.Select(c => char.IsAsciiLetterOrDigit(c) ? c : '-'));
 }

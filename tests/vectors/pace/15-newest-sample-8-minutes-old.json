@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "name": "newest sample 8 minutes old",
+  "note": "The newest reading is 8 minutes old, still active. Its 90% is as of then: 10 left at 60/h = 10 min after it, 2 min from now. Five samples inside the 30-minute lookback: low. Projection 90 + 60 x 108/60 = 198. Even 66.7, so +23.3.",
+  "kind": "five_hour",
+  "now": "2026-11-17T14:00:00Z",
+  "resetsInMinutes": 100,
+  "lengthMinutes": 300,
+  "wholePointsOnly": false,
+  "samples": [
+    {
+      "minutes": -38,
+      "percent": 60
+    },
+    {
+      "minutes": -33,
+      "percent": 65
+    },
+    {
+      "minutes": -28,
+      "percent": 70
+    },
+    {
+      "minutes": -23,
+      "percent": 75
+    },
+    {
+      "minutes": -18,
+      "percent": 80
+    },
+    {
+      "minutes": -13,
+      "percent": 85
+    },
+    {
+      "minutes": -8,
+      "percent": 90
+    }
+  ],
+  "tolerance": {
+    "hitsLimitMinutes": 2,
+    "percent": 1,
+    "ratePerHourRelative": 0.02
+  },
+  "expected": {
+    "percentNow": 90,
+    "rateKnown": true,
+    "ratePerHour": 60,
+    "hitsLimitInMinutes": 2,
+    "projectedAtReset": 198,
+    "aheadOfEvenPace": 23.3,
+    "confidence": "low"
+  }
+}

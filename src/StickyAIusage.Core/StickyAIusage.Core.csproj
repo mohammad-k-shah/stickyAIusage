@@ -1,13 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!-- Everything that isn't UI: the usage endpoint client, token refresh,
-       transcript parsing, git, pricing and the display models. Plain net8.0,
+       transcript parsing, git, pricing and the display models. Plain net10.0,
        shared by the Windows (WPF) and macOS (Avalonia) apps and tested on
        any OS. Namespaces are unchanged from when this lived in the WPF
        project (StickyAIusage.Models/Services/ViewModels). -->
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <Nullable>enable</Nullable>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>StickyAIusage</RootNamespace>
     <AssemblyName>StickyAIusage.Core</AssemblyName>
@@ -15,6 +14,13 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="StickyAIusage.Tests" />
+  </ItemGroup>
+
+  <!-- The model price list lives at the repository root (data/models.json) so a
+       price change is a JSON-only pull request and the daily refresh can fetch the
+       same file; it is embedded because a single-file publish has no loose files. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\data\models.json" LogicalName="StickyAIusage.Resources.models.json" Link="Resources\models.json" />
   </ItemGroup>
 
 </Project>

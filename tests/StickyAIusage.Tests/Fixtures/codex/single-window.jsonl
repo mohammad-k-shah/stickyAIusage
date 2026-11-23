@@ -1,0 +1,2 @@
+{"timestamp":"2026-11-19T08:40:00.000Z","type":"session_meta","payload":{"id":"019a9c20-aaaa-7bbb-8ccc-dddd11112222","timestamp":"2026-11-19T08:40:00.000Z","cwd":"/home/dev/notes","originator":"codex_cli_rs","cli_version":"0.170.0","source":"cli"}}
+{"timestamp":"2026-11-19T08:41:12.000Z","type":"event_msg","payload":{"type":"token_count","info":null,"rate_limits":{"limit_id":"codex","primary":null,"secondary":{"used_percent":72.0,"window_minutes":10080,"resets_at":1795500000},"credits":null,"plan_type":"free"}}}

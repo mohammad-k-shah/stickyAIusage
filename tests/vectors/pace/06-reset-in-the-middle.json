@@ -1,0 +1,70 @@
+{
+  "schema": 1,
+  "name": "reset in the middle",
+  "note": "The old window (reset 30 minutes ago) is ignored. New window: 2 points per 5 min = 24/h, 88 left = 220 min. Projection 12 + 24 x 4.5 = 120. Elapsed 30 = even 10, so +2.",
+  "kind": "five_hour",
+  "now": "2026-11-17T14:00:00Z",
+  "resetsInMinutes": 270,
+  "lengthMinutes": 300,
+  "wholePointsOnly": false,
+  "samples": [
+    {
+      "minutes": -55,
+      "percent": 80,
+      "resetsInMinutes": -30
+    },
+    {
+      "minutes": -50,
+      "percent": 85,
+      "resetsInMinutes": -30
+    },
+    {
+      "minutes": -45,
+      "percent": 90,
+      "resetsInMinutes": -30
+    },
+    {
+      "minutes": -40,
+      "percent": 95,
+      "resetsInMinutes": -30
+    },
+    {
+      "minutes": -25,
+      "percent": 2
+    },
+    {
+      "minutes": -20,
+      "percent": 4
+    },
+    {
+      "minutes": -15,
+      "percent": 6
+    },
+    {
+      "minutes": -10,
+      "percent": 8
+    },
+    {
+      "minutes": -5,
+      "percent": 10
+    },
+    {
+      "minutes": 0,
+      "percent": 12
+    }
+  ],
+  "tolerance": {
+    "hitsLimitMinutes": 2,
+    "percent": 1,
+    "ratePerHourRelative": 0.02
+  },
+  "expected": {
+    "percentNow": 12,
+    "rateKnown": true,
+    "ratePerHour": 24,
+    "hitsLimitInMinutes": 220,
+    "projectedAtReset": 120,
+    "aheadOfEvenPace": 2,
+    "confidence": "high"
+  }
+}

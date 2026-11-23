@@ -1,6 +1,8 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:c="using:StickyAIusage.Mac.Controls"
+        xmlns:h="using:StickyAIusage.Health"
+        xmlns:local="using:StickyAIusage.Mac"
         x:Class="StickyAIusage.Mac.SettingsWindow"
         Title="Sticky AI Usage Settings"
         Width="500" SizeToContent="Height" CanResize="False" WindowStartupLocation="CenterScreen"
@@ -75,7 +77,10 @@
     <!-- The footer stays put; everything above it scrolls once the window
          reaches its maximum height (the screen's work area, set in code). -->
     <DockPanel>
-    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="24,14,24,22" Spacing="8">
+    <!-- Which build this is, for bug reports (AppIdentity): the same words as the log's start line. -->
+    <TextBlock x:Name="BuildInfoText" DockPanel.Dock="Bottom" Margin="24,0,24,14" FontSize="11" TextWrapping="Wrap"
+               Foreground="{DynamicResource TextTertiaryBrush}" />
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="24,14,24,10" Spacing="8">
         <Button Content="Cancel" Classes="secondary" MinWidth="88" IsCancel="True" Click="Cancel_Click" />
         <Button x:Name="SaveButton" Content="Save" Classes="primary" MinWidth="88" IsDefault="True" Click="Save_Click" />
     </StackPanel>
@@ -97,6 +102,40 @@
                 <TextBlock Text="Sticky AI Usage · Claude usage at a glance" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
             </StackPanel>
         </StackPanel>
+
+        <!-- Health (Core HealthCheck): what works, and what to do about what doesn't.
+             The flyout's "Open Health" scrolls here. -->
+        <TextBlock x:Name="HealthTitle" Text="Health" Classes="section" />
+        <Border x:Name="HealthCard" Classes="card" Padding="0" Margin="0,0,0,18">
+            <StackPanel>
+                <ItemsControl x:Name="HealthList" Margin="0,4,0,0">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="h:HealthItem">
+                            <Grid Margin="16,8" ColumnDefinitions="18,*,Auto">
+                                <Ellipse Width="9" Height="9" VerticalAlignment="Top" Margin="0,5,0,0"
+                                         Fill="{Binding Status, Converter={x:Static local:SettingsWindow.HealthDotBrush}}" />
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="{Binding Title}" />
+                                    <TextBlock Text="{Binding Detail}" Classes="hint" />
+                                </StackPanel>
+                                <Button Grid.Column="2" Content="{Binding ActionLabel}" Tag="{Binding ActionId}" Classes="secondary"
+                                        Padding="12,3" FontSize="12" VerticalAlignment="Center" Margin="12,0,0,0"
+                                        IsVisible="{Binding ActionLabel, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                        Click="HealthAction_Click" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Grid Margin="16,6,16,12" ColumnDefinitions="*,Auto">
+                    <TextBlock x:Name="HealthNoteText" Classes="hint" VerticalAlignment="Center" Margin="0,0,12,0" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                        <Button x:Name="CheckHealthButton" Content="Check again" Classes="secondary" Click="CheckHealth_Click" />
+                        <Button x:Name="CopyReportButton" Content="Copy report" Classes="secondary" Click="CopyReport_Click"
+                                ToolTip.Tip="Versions, sources and every check as plain text, for a bug report. Your home folder reads ~." />
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </Border>
 
         <!-- Appearance -->
         <TextBlock Text="Appearance" Classes="section" />
@@ -130,8 +169,36 @@
                 <Rectangle Classes="divider" />
                 <Grid Classes="row" ColumnDefinitions="*,Auto">
                     <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="Pace forecast" />
+                        <TextBlock Text="When a limit comes at the current pace, if it comes before the reset (an estimate)" Classes="hint" />
+                    </StackPanel>
+                    <ToggleSwitch x:Name="ShowForecastToggle" Grid.Column="1" VerticalAlignment="Center"
+                                  AutomationProperties.Name="Show the pace forecast" />
+                </Grid>
+                <Rectangle Classes="divider" />
+                <Grid Classes="row" ColumnDefinitions="*,Auto">
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="Session lights" />
+                        <TextBlock Text="A dot per Claude Code session on the pill: amber when it needs you, green while it works (needs the plugin)" Classes="hint" />
+                    </StackPanel>
+                    <ToggleSwitch x:Name="ShowSessionLightsToggle" Grid.Column="1" VerticalAlignment="Center"
+                                  AutomationProperties.Name="Show the session lights" />
+                </Grid>
+                <Rectangle Classes="divider" />
+                <!-- Providers: the other tools beside Claude (OtherProviders.CodexSettingsHint). -->
+                <Grid Classes="row" ColumnDefinitions="*,Auto">
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="Codex" />
+                        <TextBlock x:Name="CodexHintText" Classes="hint" />
+                    </StackPanel>
+                    <ToggleSwitch x:Name="ShowCodexToggle" Grid.Column="1" VerticalAlignment="Center"
+                                  AutomationProperties.Name="Show Codex" />
+                </Grid>
+                <Rectangle Classes="divider" />
+                <Grid Classes="row" ColumnDefinitions="*,Auto">
+                    <StackPanel Margin="0,0,16,0">
                         <TextBlock Text="Current session cost" />
-                        <TextBlock Text="Estimated cost of your most recent Claude Code session" Classes="hint" />
+                        <TextBlock Text="Cost of your most recent Claude Code session (an estimate unless the plugin reports it)" Classes="hint" />
                     </StackPanel>
                     <ToggleSwitch x:Name="ShowSessionCostToggle" Grid.Column="1" VerticalAlignment="Center" />
                 </Grid>
@@ -179,6 +246,31 @@
             </StackPanel>
         </Border>
 
+        <!-- Usage source: where plan limits come from (ClaudeSource). The
+             segments, the description and the warning come from Core
+             (UsageSourceOptions), so both apps say the same. -->
+        <TextBlock Text="Usage source" Classes="section" />
+        <Border Classes="card" Padding="0" Margin="0,0,0,18">
+            <StackPanel Margin="16,12">
+                <TextBlock Text="Where your plan limits come from" />
+                <Border Classes="segments" HorizontalAlignment="Left" Margin="0,8,0,0">
+                    <StackPanel x:Name="SourceSegments" Orientation="Horizontal" />
+                </Border>
+                <TextBlock x:Name="SourceDescription" Classes="hint" Margin="0,8,0,0" />
+                <TextBlock x:Name="SourceWarning" Classes="hint" Margin="0,6,0,0" IsVisible="False"
+                           Foreground="{DynamicResource CautionBrush}" />
+                <Grid x:Name="PluginInstallRow" ColumnDefinitions="*,Auto" Margin="0,10,0,0">
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="Get the plugin: run this once in Terminal" Classes="hint" Margin="0" />
+                        <TextBlock x:Name="PluginCommandText" Margin="0,3,0,0" FontFamily="Menlo, monospace" FontSize="11"
+                                   TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}" />
+                    </StackPanel>
+                    <Button x:Name="CopyPluginCommandButton" Grid.Column="1" Content="Copy" Classes="secondary"
+                            VerticalAlignment="Center" Click="CopyPluginCommand_Click" />
+                </Grid>
+            </StackPanel>
+        </Border>
+
         <!-- Session cards -->
         <TextBlock Text="Session cards" Classes="section" />
         <Border Classes="card" Padding="0" Margin="0,0,0,18">
@@ -191,11 +283,40 @@
             </Grid>
         </Border>
 
+        <!-- Share card: the image the flyout's Share button makes. -->
+        <TextBlock Text="Share card" Classes="section" />
+        <Border Classes="card" Padding="0" Margin="0,0,0,18">
+            <StackPanel>
+                <Grid Classes="row" ColumnDefinitions="*,Auto">
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="Shape" />
+                        <TextBlock Text="Wide fits a link preview (1200×630); portrait fills a phone screen (1080×1350)" Classes="hint" />
+                    </StackPanel>
+                    <Border Grid.Column="1" Classes="segments" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <ToggleButton x:Name="ShareWideButton" Classes="segment" Content="Wide" />
+                            <ToggleButton x:Name="SharePortraitButton" Classes="segment" Content="Portrait" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+                <Rectangle Classes="divider" />
+                <Grid Classes="row" ColumnDefinitions="*,Auto">
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="Project names" />
+                        <TextBlock Text="Off: a shared session card says &quot;in a project&quot;. Branches, repositories and your account never appear" Classes="hint" />
+                    </StackPanel>
+                    <ToggleSwitch x:Name="ShareIncludeProjectNamesToggle" Grid.Column="1" VerticalAlignment="Center"
+                                  AutomationProperties.Name="Show project names on share cards" />
+                </Grid>
+            </StackPanel>
+        </Border>
+
         <!-- Usage alerts -->
         <TextBlock Text="Usage alerts" Classes="section" />
         <Border Classes="card" Margin="0,0,0,18">
             <StackPanel>
-                <TextBlock Text="The usage ring changes color as you use more of your cap or plan limits." Classes="hint" Margin="0,0,0,14" />
+                <TextBlock Text="The usage ring changes color as you use more of your cap or plan limits. Orange and red also notify you."
+                           Classes="hint" Margin="0,0,0,14" />
 
                 <!-- Live preview of the four zones, sized by the thresholds. -->
                 <Grid x:Name="ZoneBar" Height="8" ColumnDefinitions="50*,30*,15*,5*">
@@ -232,6 +353,82 @@
             </StackPanel>
         </Border>
 
+        <!-- Notifications (AlertPlanner): which ones, quiet hours, a test. -->
+        <Border x:Name="AlertsCard" Classes="card" Padding="0" Margin="0,-8,0,18">
+            <StackPanel>
+                <Grid Classes="row" ColumnDefinitions="*,Auto">
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="Notifications" />
+                        <TextBlock Text="One quiet notification when a limit is near, reached, or back. Never the same one twice"
+                                   Classes="hint" />
+                    </StackPanel>
+                    <ToggleSwitch x:Name="AlertsEnabledToggle" Grid.Column="1" VerticalAlignment="Center"
+                                  AutomationProperties.Name="Notifications" IsCheckedChanged="Alerts_Changed" />
+                </Grid>
+                <StackPanel x:Name="AlertOptions" Margin="32,0,16,12">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="At the orange and red thresholds" VerticalAlignment="Center" />
+                        <ToggleSwitch x:Name="AlertOnThresholdToggle" Grid.Column="1" VerticalAlignment="Center"
+                                      AutomationProperties.Name="Notify at the orange and red thresholds" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="When the pace says a limit is near" VerticalAlignment="Center" />
+                        <ToggleSwitch x:Name="AlertOnForecastToggle" Grid.Column="1" VerticalAlignment="Center"
+                                      AutomationProperties.Name="Notify when the pace says a limit is near" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="When a limit is reached" VerticalAlignment="Center" />
+                        <ToggleSwitch x:Name="AlertOnLimitToggle" Grid.Column="1" VerticalAlignment="Center"
+                                      AutomationProperties.Name="Notify when a limit is reached" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="When a busy window resets" VerticalAlignment="Center" />
+                        <ToggleSwitch x:Name="AlertOnResetToggle" Grid.Column="1" VerticalAlignment="Center"
+                                      AutomationProperties.Name="Notify when a busy window resets" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="When a Claude Code session needs you" VerticalAlignment="Center" />
+                        <ToggleSwitch x:Name="AlertOnNeedsYouToggle" Grid.Column="1" VerticalAlignment="Center"
+                                      AutomationProperties.Name="Notify when a Claude Code session needs you" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="When a long Claude Code task finishes" VerticalAlignment="Center" />
+                        <ToggleSwitch x:Name="AlertOnDoneToggle" Grid.Column="1" VerticalAlignment="Center"
+                                      AutomationProperties.Name="Notify when a long Claude Code task finishes" />
+                    </Grid>
+                </StackPanel>
+                <Rectangle Classes="divider" />
+                <Grid Classes="row" ColumnDefinitions="*,Auto">
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="Quiet hours" />
+                        <TextBlock Text="No notifications between these times; they are skipped, not saved for later" Classes="hint" />
+                    </StackPanel>
+                    <ToggleSwitch x:Name="QuietHoursToggle" Grid.Column="1" VerticalAlignment="Center"
+                                  AutomationProperties.Name="Quiet hours" IsCheckedChanged="Alerts_Changed" />
+                </Grid>
+                <StackPanel x:Name="QuietHoursOptions" Margin="32,0,16,12">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="From" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <TextBox x:Name="QuietFromBox" Classes="number" Width="64" AutomationProperties.Name="Quiet hours start" />
+                        <TextBlock Text="to" VerticalAlignment="Center" Margin="10,0,8,0" />
+                        <TextBox x:Name="QuietToBox" Classes="number" Width="64" AutomationProperties.Name="Quiet hours end" />
+                    </StackPanel>
+                    <TextBlock x:Name="QuietHoursError" IsVisible="False" Margin="0,8,0,0" FontSize="11.5"
+                               TextWrapping="Wrap" Foreground="{DynamicResource DangerBrush}" />
+                </StackPanel>
+                <Rectangle Classes="divider" />
+                <Grid Classes="row" ColumnDefinitions="*,Auto">
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="Test" />
+                        <TextBlock Text="Shows one banner now. Banners come from Script Editor: if none appears, allow it in System Settings → Notifications"
+                                   Classes="hint" />
+                    </StackPanel>
+                    <Button x:Name="TestAlertButton" Grid.Column="1" Content="Send a test alert" Classes="secondary"
+                            VerticalAlignment="Center" Click="TestAlert_Click" />
+                </Grid>
+            </StackPanel>
+        </Border>
+
         <!-- General -->
         <TextBlock Text="General" Classes="section" />
         <Border Classes="card" Padding="0">
@@ -242,6 +439,16 @@
                         <TextBlock Text="Start the widget automatically when you log in to your Mac" Classes="hint" />
                     </StackPanel>
                     <ToggleSwitch x:Name="LaunchAtLoginToggle" Grid.Column="1" VerticalAlignment="Center" />
+                </Grid>
+                <Rectangle Classes="divider" />
+                <Grid Classes="row" ColumnDefinitions="*,Auto">
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="Check for updates" />
+                        <TextBlock Text="Once a day, ask the project on GitHub whether a newer version is out, and fetch the latest model prices. Nothing about you is sent"
+                                   Classes="hint" />
+                    </StackPanel>
+                    <ToggleSwitch x:Name="CheckForUpdatesToggle" Grid.Column="1" VerticalAlignment="Center"
+                                  AutomationProperties.Name="Check for updates" />
                 </Grid>
                 <Rectangle Classes="divider" />
                 <Grid Classes="row" ColumnDefinitions="*,Auto">

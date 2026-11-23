@@ -1,0 +1,149 @@
+<Window x:Class="StickyAIusage.OnboardingWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="clr-namespace:StickyAIusage.Controls"
+        Title="Welcome to Sticky AI Usage"
+        Width="560" SizeToContent="Height" ResizeMode="NoResize" WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource WindowBackgroundBrush}"
+        Foreground="{DynamicResource TextPrimaryBrush}"
+        FontFamily="{StaticResource UiFont}" FontSize="13"
+        UseLayoutRounding="True">
+    <Window.Resources>
+        <Style x:Key="StepTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,0,0,10" />
+        </Style>
+        <Style x:Key="Body" TargetType="TextBlock">
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="LineHeight" Value="19" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+        </Style>
+    </Window.Resources>
+
+    <DockPanel TextElement.Foreground="{DynamicResource TextPrimaryBrush}"
+               TextElement.FontFamily="{StaticResource UiFont}" TextElement.FontSize="13">
+        <!-- Footer: where you are, and the way on. -->
+        <Grid DockPanel.Dock="Bottom" Margin="28,6,28,20">
+            <TextBlock x:Name="StepCaptionText" VerticalAlignment="Center" FontSize="12"
+                       Foreground="{DynamicResource TextTertiaryBrush}" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="BackButton" Content="Back" Style="{StaticResource SecondaryButton}" MinWidth="88" Click="Back_Click" />
+                <Button x:Name="NextButton" Content="Next" Style="{StaticResource PrimaryButton}" MinWidth="88" IsDefault="True"
+                        Margin="8,0,0,0" Click="Next_Click" />
+            </StackPanel>
+        </Grid>
+
+        <StackPanel Margin="28,24,28,10">
+            <!-- Header -->
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
+                <Border Width="42" Height="42" CornerRadius="10" Background="{DynamicResource CardBrush}"
+                        BorderBrush="{DynamicResource SubtleBorderBrush}" BorderThickness="1">
+                    <Grid>
+                        <c:ProgressRing Width="28" Height="28" Thickness="3" Value="62"
+                                        Stroke="{DynamicResource AccentBrush}" TrackBrush="{DynamicResource StrongBorderBrush}" />
+                        <TextBlock Text="$" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Grid>
+                </Border>
+                <TextBlock x:Name="WindowTitleText" Margin="14,0,0,0" VerticalAlignment="Center" FontSize="20" FontWeight="SemiBold" />
+            </StackPanel>
+
+            <!-- Step 1: what the app reads -->
+            <StackPanel x:Name="ReadsPanel">
+                <TextBlock x:Name="ReadsTitleText" Style="{StaticResource StepTitle}" />
+                <Border Style="{StaticResource Card}" Padding="16,12">
+                    <StackPanel>
+                        <ItemsControl x:Name="ReadsList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,3">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="18" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Ellipse Width="6" Height="6" Fill="{DynamicResource AccentBrush}" VerticalAlignment="Top" Margin="0,7,0,0" />
+                                        <TextBlock Grid.Column="1" Text="{Binding}" TextWrapping="Wrap" LineHeight="19" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock x:Name="NetworkLineText" Style="{StaticResource Body}" Margin="0,10,0,0" FontSize="12" />
+                        <Grid Margin="0,10,0,0">
+                            <TextBlock x:Name="UpdateCheckLabel" VerticalAlignment="Center" />
+                            <CheckBox x:Name="UpdateCheck" Style="{StaticResource ToggleSwitch}" HorizontalAlignment="Right" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- Step 2 (and the upgrade screen, and Connect from Health): connect the plugin -->
+            <StackPanel x:Name="ConnectPanel">
+                <TextBlock x:Name="ConnectTitleText" Style="{StaticResource StepTitle}" />
+                <TextBlock x:Name="ConnectIntroText" Style="{StaticResource Body}" Margin="0,0,0,10" />
+                <Border Background="{DynamicResource InputBrush}" BorderBrush="{DynamicResource SubtleBorderBrush}" BorderThickness="1"
+                        CornerRadius="8" Padding="12,9">
+                    <TextBlock x:Name="CommandText" FontFamily="{StaticResource MonoFont}" FontSize="12" TextWrapping="Wrap" />
+                </Border>
+                <WrapPanel Margin="0,10,0,0">
+                    <Button x:Name="RunButton" Style="{StaticResource PrimaryButton}" Click="Run_Click" />
+                    <Button x:Name="CopyButton" Style="{StaticResource SecondaryButton}" Margin="8,0,0,0" Click="Copy_Click" />
+                </WrapPanel>
+                <TextBlock x:Name="CopyHintText" Style="{StaticResource Body}" Margin="0,6,0,0" FontSize="12" />
+                <Border x:Name="StatusBorder" Margin="0,12,0,0" CornerRadius="8" Padding="12,9" BorderThickness="1"
+                        BorderBrush="{DynamicResource SubtleBorderBrush}" Background="{DynamicResource CardBrush}" Visibility="Collapsed">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="18" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Ellipse x:Name="StatusDot" Width="9" Height="9" VerticalAlignment="Top" Margin="0,5,0,0" />
+                        <TextBlock x:Name="StatusText" Grid.Column="1" TextWrapping="Wrap" LineHeight="19" />
+                    </Grid>
+                </Border>
+                <TextBox x:Name="OutputBox" Margin="0,8,0,0" IsReadOnly="True" TextWrapping="Wrap" MaxHeight="120"
+                         VerticalScrollBarVisibility="Auto" FontFamily="{StaticResource MonoFont}" FontSize="11"
+                         Background="{DynamicResource InputBrush}" Foreground="{DynamicResource TextSecondaryBrush}"
+                         BorderBrush="{DynamicResource SubtleBorderBrush}" Padding="6" Visibility="Collapsed"
+                         AutomationProperties.Name="What Claude Code printed" />
+                <Button x:Name="LegacyLinkButton" Style="{StaticResource LinkButton}" HorizontalAlignment="Left" Margin="0,12,0,0"
+                        Click="LegacyLink_Click" />
+                <Border x:Name="LegacyPanel" Margin="0,8,0,0" Style="{StaticResource Card}" Padding="14,10" Visibility="Collapsed">
+                    <StackPanel>
+                        <TextBlock x:Name="LegacyWarningText" Style="{StaticResource Body}" FontSize="12"
+                                   Foreground="{DynamicResource CautionBrush}" />
+                        <Button x:Name="LegacyButton" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left" Margin="0,8,0,0"
+                                Click="Legacy_Click" />
+                        <TextBlock x:Name="LegacyChosenText" Style="{StaticResource Body}" Margin="0,8,0,0" FontSize="12" Visibility="Collapsed" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- Step 3: make it yours -->
+            <StackPanel x:Name="YoursPanel">
+                <TextBlock x:Name="YoursTitleText" Style="{StaticResource StepTitle}" />
+                <Border Style="{StaticResource Card}" Padding="16,12">
+                    <StackPanel>
+                        <Grid>
+                            <TextBlock x:Name="StartAtLoginLabel" VerticalAlignment="Center" />
+                            <CheckBox x:Name="StartAtLoginCheck" Style="{StaticResource ToggleSwitch}" HorizontalAlignment="Right" IsChecked="True" />
+                        </Grid>
+                        <Grid Margin="0,12,0,0">
+                            <TextBlock x:Name="AlertsLabel" VerticalAlignment="Center" />
+                            <CheckBox x:Name="AlertsCheck" Style="{StaticResource ToggleSwitch}" HorizontalAlignment="Right" />
+                        </Grid>
+                        <TextBlock x:Name="PlacementTitleText" Margin="0,14,0,6" />
+                        <Border HorizontalAlignment="Left" CornerRadius="8" Padding="2"
+                                Background="{DynamicResource InputBrush}" BorderBrush="{DynamicResource SubtleBorderBrush}" BorderThickness="1">
+                            <StackPanel Orientation="Horizontal">
+                                <RadioButton x:Name="DockTaskbarChoice" GroupName="Dock" Style="{StaticResource SegmentTab}" Focusable="True" Content="In the taskbar" />
+                                <RadioButton x:Name="DockAboveChoice" GroupName="Dock" Style="{StaticResource SegmentTab}" Focusable="True" Content="Above the taskbar" />
+                            </StackPanel>
+                        </Border>
+                        <TextBlock x:Name="PlacementText" Style="{StaticResource Body}" Margin="0,8,0,0" FontSize="12" />
+                    </StackPanel>
+                </Border>
+                <TextBlock x:Name="FinishNoteText" Style="{StaticResource Body}" Margin="2,10,0,0" FontSize="12" />
+            </StackPanel>
+        </StackPanel>
+    </DockPanel>
+</Window>

@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "name": "already at 100",
+  "note": "At 100% there is no limit time to forecast (the pill says \"limit reached\"). Slope 42.5/125 per min = 20.4/h; projection 100 + 20.4 = 120.4. 4 samples: low.",
+  "kind": "five_hour",
+  "now": "2026-11-17T14:00:00Z",
+  "resetsInMinutes": 60,
+  "lengthMinutes": 300,
+  "wholePointsOnly": false,
+  "samples": [
+    {
+      "minutes": -15,
+      "percent": 95
+    },
+    {
+      "minutes": -10,
+      "percent": 97
+    },
+    {
+      "minutes": -5,
+      "percent": 99
+    },
+    {
+      "minutes": 0,
+      "percent": 100
+    }
+  ],
+  "tolerance": {
+    "hitsLimitMinutes": 2,
+    "percent": 1,
+    "ratePerHourRelative": 0.02
+  },
+  "expected": {
+    "percentNow": 100,
+    "rateKnown": true,
+    "ratePerHour": 20.4,
+    "hitsLimitInMinutes": null,
+    "projectedAtReset": 120.4,
+    "aheadOfEvenPace": 20,
+    "confidence": "low"
+  }
+}

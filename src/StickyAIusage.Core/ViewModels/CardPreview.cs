@@ -14,8 +14,8 @@ public static class CardPreview
     {
         SessionId = "3c8e62c4-17a7-453e-8385-88147c5aaf07",
         SessionName = "Refactor payment retries",
-        TranscriptPath = "",
-        WorkingDirectory = "/Users/you/dev/AcmeWebApp",
+        TranscriptPath = "/Users/you/.claude/projects/-Users-you-dev-acme-webapp/3c8e62c4-17a7-453e-8385-88147c5aaf07.jsonl",
+        WorkingDirectory = "/Users/you/dev/acme-webapp",
         Model = "claude-opus-5",
         ThinkingEffort = "high",
         ClaudeCodeVersion = "2.1.275",
@@ -55,6 +55,13 @@ public static class CardPreview
     };
 
     /// <summary>The preview card for a layout being edited.</summary>
-    public static SessionCardViewModel Card(CardLayout layout, DateTimeOffset now) =>
-        SessionCardViewModel.From(Sample(now), now, layout);
+    /// <summary>The customizer's live preview: always open, since its chip rows
+    /// are what is being arranged (the flyout's cards start folded).</summary>
+    public static SessionCardViewModel Card(CardLayout layout, DateTimeOffset now)
+    {
+        var card = SessionCardViewModel.From(Sample(now), now, layout);
+        card.IsExpanded = true;
+        card.CanFold = false;
+        return card;
+    }
 }

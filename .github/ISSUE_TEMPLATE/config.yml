@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and ideas to talk over
+    url: https://github.com/mohammad-k-shah/stickyAIusage/discussions
+    about: Ask, share a setup or a share card, or talk an idea through before it becomes an issue.
+  - name: A security problem
+    url: https://github.com/mohammad-k-shah/stickyAIusage/security/advisories/new
+    about: Report it privately, please, not as an issue (see SECURITY.md).

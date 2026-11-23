@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "name": "steady burn hits before reset",
+  "note": "5 points every 5 minutes = 60/h; 30 points left = 30 min, before the reset in 120. Projection 70 + 60 x 2 = 190. Elapsed 180 of 300 = even 60, so +10.",
+  "kind": "five_hour",
+  "now": "2026-11-17T14:00:00Z",
+  "resetsInMinutes": 120,
+  "lengthMinutes": 300,
+  "wholePointsOnly": false,
+  "samples": [
+    {
+      "minutes": -30,
+      "percent": 40
+    },
+    {
+      "minutes": -25,
+      "percent": 45
+    },
+    {
+      "minutes": -20,
+      "percent": 50
+    },
+    {
+      "minutes": -15,
+      "percent": 55
+    },
+    {
+      "minutes": -10,
+      "percent": 60
+    },
+    {
+      "minutes": -5,
+      "percent": 65
+    },
+    {
+      "minutes": 0,
+      "percent": 70
+    }
+  ],
+  "tolerance": {
+    "hitsLimitMinutes": 2,
+    "percent": 1,
+    "ratePerHourRelative": 0.02
+  },
+  "expected": {
+    "percentNow": 70,
+    "rateKnown": true,
+    "ratePerHour": 60,
+    "hitsLimitInMinutes": 30,
+    "projectedAtReset": 190,
+    "aheadOfEvenPace": 10,
+    "confidence": "high"
+  }
+}
